@@ -53,5 +53,17 @@ impl Wallet {
     pub fn seed(&self) -> &[u8] {
         &self.seed
     }
+
+    /// Reconstructs a `Wallet` from a raw seed (no mnemonic).
+    ///
+    /// This is used when loading a wallet from encrypted storage — the mnemonic
+    /// is not stored, only the seed. The reconstructed wallet can derive all
+    /// chain addresses (eth, sol, veil) from the seed.
+    pub fn from_seed(seed: Vec<u8>) -> Self {
+        Wallet {
+            mnemonic: String::new(),
+            seed,
+        }
+    }
 }
 
