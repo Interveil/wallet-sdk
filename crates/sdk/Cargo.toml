@@ -1,0 +1,16 @@
+[package]
+name = "sdk"
+version = "0.1.0"
+edition = "2024"
+description = "Multichain wallet SDK with ETH, SOL, and PVX support"
+license = "BSD-3-Clause"
+repository = "https://github.com/Interveil/wallet-sdk"
+
+[dependencies]
+wallet-core = { path = "../wallet-core" }
+eth = { path = "../eth" }
+sol = { path = "../sol" }
+veil = { path = "../veil" }
+storage = { path = "../storage" }
+thiserror = "2"
+zeroize = { version = "1", features = ["zeroize_derive"] }

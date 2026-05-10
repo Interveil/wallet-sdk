@@ -1,3 +1,10 @@
 [workspace]
+members = ["crates/wallet-core", "crates/eth", "crates/sol", "crates/veil", "crates/storage", "crates/sdk", "crates/wallet-cli"]
 resolver = "2"
-members = ["crates/wallet-core", "crates/eth", "crates/sol", "crates/veil", "crates/storage"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "BSD-3-Clause"
+repository = "https://github.com/Interveil/wallet-sdk"
+authors =  Kira
