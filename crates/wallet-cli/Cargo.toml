@@ -1,0 +1,17 @@
+[package]
+name = "wallet-cli"
+version = "0.1.0"
+edition = "2024"
+description = "CLI tool for multichain wallet SDK"
+license = "BSD-3-Clause"
+repository = "https://github.com/Interveil/wallet-sdk"
+
+[[bin]]
+name = "wallet"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+sdk = { path = "../sdk" }
+anyhow = "1"
+rpassword = "7"
