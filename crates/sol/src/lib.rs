@@ -15,6 +15,11 @@ pub enum SolError {
     KeyGenerationFailed,
 }
 
+/// Derives the raw Ed25519 private key bytes (SLIP-0010 path m/44'/501'/0'/0').
+pub fn derive_sol_private_key(seed: &[u8]) -> Result<[u8; 32], SolError> {
+    derive_key(seed, SOLANA_PATH).map_err(|_| SolError::DerivationFailed)
+}
+
 /// Derives a Solana address from a BIP-39 seed (64 bytes).
 ///
 /// Uses BIP-44 path: `m/44'/501'/0'/0'`

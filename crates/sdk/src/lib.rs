@@ -85,6 +85,18 @@ impl Wallet {
         let core = storage::load_wallet(WALLET_PATH, password).map_err(map_storage_err)?;
         Self::from_core(core)
     }
+
+    pub fn eth_private_key(&self) -> Result<[u8; 32], SdkError> {
+        eth::derive_eth_private_key(&self.seed).map_err(|_| SdkError::DerivationFailed)
+    }
+
+    pub fn sol_private_key(&self) -> Result<[u8; 32], SdkError> {
+        sol::derive_sol_private_key(&self.seed).map_err(|_| SdkError::DerivationFailed)
+    }
+
+    pub fn pvx_spending_key(&self) -> Result<[u8; 32], SdkError> {
+        veil::derive_spending_key(&self.seed).map_err(|_| SdkError::DerivationFailed)
+    }
 }
 
 fn map_storage_err(e: storage::StorageError) -> SdkError {
