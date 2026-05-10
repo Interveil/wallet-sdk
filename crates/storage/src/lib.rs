@@ -1,8 +1,8 @@
 // Allow GenericArray::from_slice deprecation (generic-array 0.14 → 1.x migration)
 #![allow(deprecated)]
 
-use aes_gcm::{Aes256Gcm, Nonce};
 use aes_gcm::aead::{Aead, KeyInit};
+use aes_gcm::{Aes256Gcm, Nonce};
 use argon2::Argon2;
 use rand::RngCore;
 use std::fs;
@@ -53,7 +53,11 @@ fn derive_key(password: &str, salt: &[u8]) -> Result<Zeroizing<[u8; KEY_LEN]>, S
     Ok(key)
 }
 
-pub fn save_wallet(path: impl AsRef<Path>, wallet: &Wallet, password: &str) -> Result<(), StorageError> {
+pub fn save_wallet(
+    path: impl AsRef<Path>,
+    wallet: &Wallet,
+    password: &str,
+) -> Result<(), StorageError> {
     let seed = wallet.seed();
 
     let mut salt = [0u8; SALT_LEN];

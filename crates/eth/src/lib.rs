@@ -21,11 +21,10 @@ pub enum EthError {
 /// Returns `EthError::DerivationFailed` if the BIP-32 key derivation fails.
 /// Returns `EthError::AddressGenerationFailed` if the address computation fails.
 pub fn derive_eth_address(seed: &[u8]) -> Result<String, EthError> {
-    let path = DerivationPath::from_str("m/44'/60'/0'/0/0")
-        .map_err(|_| EthError::DerivationFailed)?;
+    let path =
+        DerivationPath::from_str("m/44'/60'/0'/0/0").map_err(|_| EthError::DerivationFailed)?;
 
-    let child =
-        XPrv::derive_from_path(seed, &path).map_err(|_| EthError::DerivationFailed)?;
+    let child = XPrv::derive_from_path(seed, &path).map_err(|_| EthError::DerivationFailed)?;
 
     let signing_key: &SigningKey = child.private_key();
     let verifying_key = signing_key.verifying_key();

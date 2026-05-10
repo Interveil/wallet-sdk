@@ -1,6 +1,4 @@
-use veil::{
-    derive_nullifier_key, derive_private_address, derive_spending_key, derive_viewing_key,
-};
+use veil::{derive_nullifier_key, derive_private_address, derive_spending_key, derive_viewing_key};
 use wallet_core::Wallet;
 
 #[test]
@@ -16,10 +14,8 @@ fn test_deterministic_address() {
 
 #[test]
 fn test_different_seed_different_address() {
-    let phrase_a =
-        "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-    let phrase_b =
-        "legal winner thank year wave sausage worth useful legal winner thank yellow";
+    let phrase_a = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let phrase_b = "legal winner thank year wave sausage worth useful legal winner thank yellow";
 
     let wallet_a = Wallet::import(phrase_a).unwrap();
     let wallet_b = Wallet::import(phrase_b).unwrap();

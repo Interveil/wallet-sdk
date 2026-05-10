@@ -1,7 +1,7 @@
 use std::fs;
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::path::PathBuf;
-use storage::{load_wallet, save_wallet, StorageError};
+use std::sync::atomic::{AtomicU32, Ordering};
+use storage::{StorageError, load_wallet, save_wallet};
 
 // Must match storage::HEADER_LEN (1 + 16 + 12)
 const HEADER_LEN: usize = 29;
@@ -70,7 +70,10 @@ fn test_format_structure() {
     let data = fs::read(&path).unwrap();
 
     assert_eq!(data[0], 0x01, "version byte must be 0x01");
-    assert!(data.len() > HEADER_LEN, "file must contain ciphertext after header");
+    assert!(
+        data.len() > HEADER_LEN,
+        "file must contain ciphertext after header"
+    );
     // Salt and nonce should be non-zero (randomly generated)
     assert_ne!(&data[1..17], &[0u8; 16], "salt must not be zero");
     assert_ne!(&data[17..29], &[0u8; 12], "nonce must not be zero");
