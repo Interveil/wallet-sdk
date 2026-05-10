@@ -35,8 +35,7 @@ pub enum SolError {
 pub fn derive_sol_address(seed: &[u8]) -> Result<String, SolError> {
     let key_bytes = derive_key(seed, SOLANA_PATH).map_err(|_| SolError::DerivationFailed)?;
 
-    let signing_key =
-        SigningKey::from_bytes(&key_bytes);
+    let signing_key = SigningKey::from_bytes(&key_bytes);
 
     let public_key = signing_key.verifying_key().to_bytes();
 

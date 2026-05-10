@@ -71,8 +71,8 @@ pub(crate) fn derive_key(seed: &[u8], path: &[u32]) -> Result<[u8; 32], Derivati
 /// IL = I[0..32]   → master private key seed
 /// IR = I[32..64]  → master chain code
 fn master_key(seed: &[u8]) -> Result<([u8; 32], [u8; 32]), DerivationError> {
-    let mut mac =
-        HmacSha512::new_from_slice(ED25519_SEED_KEY).map_err(|_| DerivationError::HmacInitFailed)?;
+    let mut mac = HmacSha512::new_from_slice(ED25519_SEED_KEY)
+        .map_err(|_| DerivationError::HmacInitFailed)?;
     mac.update(seed);
     let result = mac.finalize().into_bytes();
 
@@ -124,7 +124,7 @@ fn child_key(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{child_key, derive_key, master_key, DerivationError};
 
     /// SLIP-0010 test vector 1 (Ed25519, master key).
     /// seed = 00010203...0f (16 bytes).
@@ -154,7 +154,10 @@ mod tests {
     #[test]
     fn test_derive_key_invalid_seed_length() {
         let result = derive_key(&[0u8; 32], &[44]);
-        assert!(matches!(result, Err(DerivationError::InvalidSeedLength(32))));
+        assert!(matches!(
+            result,
+            Err(DerivationError::InvalidSeedLength(32))
+        ));
     }
 
     #[test]

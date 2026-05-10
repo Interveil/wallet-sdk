@@ -18,10 +18,8 @@ fn test_same_mnemonic_same_seed() {
 
 #[test]
 fn test_different_mnemonic_different_seed() {
-    let phrase_a =
-        "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-    let phrase_b =
-        "legal winner thank year wave sausage worth useful legal winner thank yellow";
+    let phrase_a = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let phrase_b = "legal winner thank year wave sausage worth useful legal winner thank yellow";
 
     let wallet_a = Wallet::import(phrase_a).unwrap();
     let wallet_b = Wallet::import(phrase_b).unwrap();
