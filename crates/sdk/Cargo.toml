@@ -7,10 +7,10 @@ license = "BSD-3-Clause"
 repository = "https://github.com/Interveil/wallet-sdk"
 
 [dependencies]
-wallet-core = { path = "../wallet-core" }
-eth = { path = "../eth" }
-sol = { path = "../sol" }
-veil = { path = "../veil" }
-storage = { path = "../storage" }
+wallet-core = "0.1.0"
+eth = "0.1.0"
+sol = "0.1.0"
+veil = "0.1.0"
+storage = "0.1.0"
 thiserror = "2"
 zeroize = { version = "1", features = ["zeroize_derive"] }

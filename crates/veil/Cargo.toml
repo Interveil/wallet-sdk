@@ -7,7 +7,7 @@ license = "BSD-3-Clause"
 repository = "https://github.com/Interveil/wallet-sdk"
 
 [dependencies]
-wallet-core = { path = "../wallet-core" }
+wallet-core = "0.1.0"
 blake3 = { version = "1.8", features = ["zeroize"] }
 ed25519-dalek = "2.2"
 bech32 = "0.11"
