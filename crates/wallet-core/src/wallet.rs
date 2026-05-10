@@ -31,11 +31,10 @@ impl Wallet {
     }
 
     pub fn import(mnemonic: &str) -> Result<Self, WalletError> {
-        let mnemonic = Mnemonic::parse_in(Language::English, mnemonic)
-            .map_err(|e| match e {
-                bip39::Error::InvalidChecksum => WalletError::InvalidChecksum,
-                _ => WalletError::InvalidMnemonic,
-            })?;
+        let mnemonic = Mnemonic::parse_in(Language::English, mnemonic).map_err(|e| match e {
+            bip39::Error::InvalidChecksum => WalletError::InvalidChecksum,
+            _ => WalletError::InvalidMnemonic,
+        })?;
 
         let phrase = mnemonic.to_string();
         let seed = mnemonic.to_seed("").to_vec();
@@ -66,4 +65,3 @@ impl Wallet {
         }
     }
 }
-

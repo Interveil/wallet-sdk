@@ -1,6 +1,6 @@
 mod keys;
 
-use bech32::{encode_lower, Bech32, Hrp};
+use bech32::{Bech32, Hrp, encode_lower};
 use ed25519_dalek::SigningKey;
 use thiserror::Error;
 
@@ -40,8 +40,7 @@ pub fn derive_nullifier_key(seed: &[u8]) -> Result<[u8; 32], VeilError> {
 ///
 /// Format: `pvx1...`
 pub fn derive_private_address(seed: &[u8]) -> Result<String, VeilError> {
-    let spending_key =
-        keys::derive_key(seed, 0);
+    let spending_key = keys::derive_key(seed, 0);
 
     let signing_key = SigningKey::from_bytes(&spending_key);
     let public_key = signing_key.verifying_key().to_bytes();
