@@ -2,6 +2,9 @@
 name = "storage"
 version = "0.1.0"
 edition = "2024"
+description = "Encrypted wallet storage (AES-256-GCM + Argon2)"
+license = "BSD-3-Clause"
+repository = "https://github.com/Interveil/wallet-sdk"
 
 [dependencies]
 wallet-core = { path = "../wallet-core" }

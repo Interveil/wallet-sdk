@@ -2,6 +2,9 @@
 name = "wallet-core"
 version = "0.1.0"
 edition = "2024"
+description = "Core wallet engine: mnemonic, seed generation, and deterministic key derivation"
+license = "BSD-3-Clause"
+repository = "https://github.com/Interveil/wallet-sdk"
 
 [dependencies]
 bip39 = { version = "2.2", features = ["rand"] }
