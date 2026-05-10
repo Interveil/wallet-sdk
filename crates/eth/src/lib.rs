@@ -12,6 +12,20 @@ pub enum EthError {
     AddressGenerationFailed,
 }
 
+/// Derives the raw secp256k1 private key bytes (BIP-44 path m/44'/60'/0'/0/0).
+pub fn derive_eth_private_key(seed: &[u8]) -> Result<[u8; 32], EthError> {
+    let path =
+        DerivationPath::from_str("m/44'/60'/0'/0/0").map_err(|_| EthError::DerivationFailed)?;
+
+    let child = XPrv::derive_from_path(seed, &path).map_err(|_| EthError::DerivationFailed)?;
+
+    let signing_key: &SigningKey = child.private_key();
+    let field_bytes = signing_key.to_bytes();
+    let mut raw = [0u8; 32];
+    raw.copy_from_slice(&field_bytes);
+    Ok(raw)
+}
+
 /// Derives an Ethereum address from a BIP-39 seed (64 bytes).
 ///
 /// Uses BIP-44 path: `m/44'/60'/0'/0/0`
