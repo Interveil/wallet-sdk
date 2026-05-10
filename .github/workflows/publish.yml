@@ -1,0 +1,62 @@
+name: wallet-sdk
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Login to crates.io
+        run: cargo login ${{ secrets.CARGO_TOKEN }}
+
+      # =========================
+      # STEP 1 — CORE LAYER
+      # =========================
+      - name: Publish wallet-core
+        run: cargo publish -p wallet-core
+
+      # =========================
+      # STEP 2 — CHAIN MODULES
+      # =========================
+      - name: Publish ETH / SOL / VEIL
+        run: |
+          cargo publish -p eth
+          cargo publish -p sol
+          cargo publish -p pvx
+
+      # =========================
+      # STEP 3 — STORAGE
+      # =========================
+      - name: Publish vault
+        run: cargo publish -p storage
+
+      # =========================
+      # STEP 4 — SDK LAYER
+      # =========================
+      - name: Publish wallet-sdk
+        run: cargo publish -p sdk
+
+      # =========================
+      # STEP 5 — CLI TOOL
+      # =========================
+      - name: Publish wallet-cli
+        run: cargo publish -p wallet-cli
