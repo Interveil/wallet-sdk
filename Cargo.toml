@@ -8,3 +8,10 @@ edition = "2024"
 license = "BSD-3-Clause"
 repository = "https://github.com/Interveil/wallet-sdk"
 authors =  ["Lika"]
+
+[patch.crates-io]
+wallet-core = { path = "crates/wallet-core" }
+eth = { path = "crates/eth" }
+sol = { path = "crates/sol" }
+veil = { path = "crates/veil" }
+storage = { path = "crates/storage" }
