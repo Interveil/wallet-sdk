@@ -1,7 +1,7 @@
 mod derivation;
 
 use derivation::derive_key;
-use ed25519_dalek::SigningKey;
+use ed25519_dalek::{Signer, SigningKey};
 use thiserror::Error;
 
 /// BIP-44 path indices for Solana: `m/44'/501'/0'/0'`
@@ -13,6 +13,8 @@ pub enum SolError {
     DerivationFailed,
     #[error("Ed25519 key generation failed")]
     KeyGenerationFailed,
+    #[error("signing failed")]
+    SigningFailed,
 }
 
 /// Derives the raw Ed25519 private key bytes (SLIP-0010 path m/44'/501'/0'/0').
@@ -49,4 +51,19 @@ pub fn derive_sol_address(seed: &[u8]) -> Result<String, SolError> {
     let public_key = signing_key.verifying_key().to_bytes();
 
     Ok(bs58::encode(public_key).into_string())
+}
+
+/// Signs a 32-byte SHA-256 hash with an Ed25519 private key.
+///
+/// Returns the 64-byte raw Ed25519 signature.
+///
+/// # Errors
+///
+/// Returns `SolError::KeyGenerationFailed` if the key bytes are invalid.
+/// Returns `SolError::SigningFailed` if the signing operation fails.
+pub fn sign_sol(key: &[u8; 32], hash: &[u8; 32]) -> Result<[u8; 64], SolError> {
+    let signing_key =
+        SigningKey::from_bytes(key);
+    let signature = signing_key.sign(hash.as_ref());
+    Ok(signature.to_bytes())
 }

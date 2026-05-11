@@ -1,5 +1,6 @@
 use bip32::{DerivationPath, XPrv};
-use k256::ecdsa::SigningKey;
+use k256::ecdsa::signature::hazmat::PrehashSigner;
+use k256::ecdsa::{Signature, SigningKey};
 use std::str::FromStr;
 use thiserror::Error;
 use tiny_keccak::{Hasher, Keccak};
@@ -10,6 +11,8 @@ pub enum EthError {
     DerivationFailed,
     #[error("Ethereum address generation failed")]
     AddressGenerationFailed,
+    #[error("signing failed")]
+    SigningFailed,
 }
 
 /// Derives the raw secp256k1 private key bytes (BIP-44 path m/44'/60'/0'/0/0).
@@ -56,4 +59,21 @@ pub fn derive_eth_address(seed: &[u8]) -> Result<String, EthError> {
 
     let address = &hash[12..];
     Ok(format!("0x{}", hex::encode(address)))
+}
+
+/// Signs a 32-byte SHA-256 hash with a secp256k1 private key (ECDSA, RFC 6979).
+///
+/// Uses deterministic `sign_prehash` — no randomness, no extra hashing.
+/// Returns the 64-byte raw `(r || s)` signature.
+///
+/// # Errors
+///
+/// Returns `EthError::SigningFailed` if key construction or signing fails.
+pub fn sign_eth(key: &[u8; 32], hash: &[u8; 32]) -> Result<[u8; 64], EthError> {
+    let signing_key =
+        SigningKey::from_slice(key.as_ref()).map_err(|_| EthError::SigningFailed)?;
+    let signature: Signature = signing_key
+        .sign_prehash(hash.as_ref())
+        .map_err(|_| EthError::SigningFailed)?;
+    Ok(signature.to_bytes().into())
 }
