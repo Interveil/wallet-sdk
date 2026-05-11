@@ -222,6 +222,57 @@ impl Wallet {
         Ok(wallet)
     }
 
+    /// Returns the mnemonic seed phrase as a zeroable owned string.
+    ///
+    /// Returns `None` if the wallet has no mnemonic (e.g. imported without
+    /// one from a legacy vault).
+    pub fn export_seed(&self) -> Option<Zeroizing<String>> {
+        self.mnemonic().map(|m| Zeroizing::new(m.to_string()))
+    }
+
+    /// Returns the Ethereum private key as a hex string with `0x` prefix.
+    ///
+    /// The returned [`Zeroizing`]`<String>` is zeroed on drop.
+    ///
+    /// # Errors
+    ///
+    /// Returns `WalletError::DerivationFailed` if BIP-32 derivation fails.
+    pub fn export_eth_private_key(&self) -> Result<Zeroizing<String>, WalletError> {
+        let key = self.eth_private_key()?;
+        Ok(Zeroizing::new(format!("0x{}", hex::encode(key))))
+    }
+
+    /// Returns the Solana private key as a base58-encoded string.
+    ///
+    /// The returned [`Zeroizing`]`<String>` is zeroed on drop.
+    ///
+    /// # Errors
+    ///
+    /// Returns `WalletError::DerivationFailed` if SLIP-0010 derivation fails.
+    pub fn export_sol_private_key(&self) -> Result<Zeroizing<String>, WalletError> {
+        let key = self.sol_private_key()?;
+        Ok(Zeroizing::new(bs58::encode(key).into_string()))
+    }
+
+    /// Returns the PVX spending key as a bech32 string with `pvxsk` prefix.
+    ///
+    /// The returned [`Zeroizing`]`<String>` is zeroed on drop.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the hardcoded Bech32 HRP `"pvxsk"` is invalid (should never
+    /// happen).
+    ///
+    /// # Errors
+    ///
+    /// Returns `WalletError::DerivationFailed` if key derivation fails.
+    pub fn export_pvx_spending_key(&self) -> Result<Zeroizing<String>, WalletError> {
+        let key = self.pvx_spending_key()?;
+        let hrp = bech32::Hrp::parse("pvxsk").unwrap();
+        let encoded = bech32::encode_lower::<bech32::Bech32>(hrp, key.as_ref()).unwrap();
+        Ok(Zeroizing::new(encoded))
+    }
+
     /// Derives the secp256k1 private key for Ethereum (BIP-44 path
     /// `m/44'/60'/0'/0/0`).
     ///
