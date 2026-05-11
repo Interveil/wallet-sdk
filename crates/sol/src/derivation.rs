@@ -70,6 +70,12 @@ pub(crate) fn derive_key(seed: &[u8], path: &[u32]) -> Result<[u8; 32], Derivati
 /// I = HMAC-SHA512(key = "ed25519 seed", data = seed)
 /// IL = I[0..32]   → master private key seed
 /// IR = I[32..64]  → master chain code
+///
+/// # Note
+///
+/// `master_key` does NOT validate seed length — it is a private function
+/// called exclusively from [`derive_key`], which performs the 64-byte
+/// seed length check. Callers MUST ensure the seed is 64 bytes.
 fn master_key(seed: &[u8]) -> Result<([u8; 32], [u8; 32]), DerivationError> {
     let mut mac = HmacSha512::new_from_slice(ED25519_SEED_KEY)
         .map_err(|_| DerivationError::HmacInitFailed)?;
@@ -89,8 +95,8 @@ fn master_key(seed: &[u8]) -> Result<([u8; 32], [u8; 32]), DerivationError> {
 /// Derives a hardened child at `index`:
 ///
 /// I = HMAC-SHA512(
-///     key  = parent_chain_code,
-///     data = 0x00 || parent_key_seed || ser32(i')
+///     key  = `parent_chain_code`,
+///     data = 0x00 || `parent_key_seed` || `ser32(i')`
 /// )
 ///
 /// where `ser32(i') = (0x80000000 | index)` encoded as 4-byte big-endian.

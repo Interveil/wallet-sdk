@@ -5,7 +5,10 @@ edition = "2024"
 description = "Core wallet engine: mnemonic, seed generation, and deterministic key derivation"
 license = "BSD-3-Clause"
 repository = "https://github.com/Interveil/wallet-sdk"
+keywords = ["wallet", "mnemonic", "bip39", "seed", "cryptocurrency"]
+categories = ["cryptography::cryptocurrencies"]
 
 [dependencies]
 bip39 = { version = "2.2", features = ["rand"] }
 thiserror = "2"
+zeroize = { version = "1", features = ["zeroize_derive"] }

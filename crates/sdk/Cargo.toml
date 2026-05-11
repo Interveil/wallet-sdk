@@ -5,6 +5,8 @@ edition = "2024"
 description = "Multichain wallet SDK with ETH, SOL, and PVX support"
 license = "BSD-3-Clause"
 repository = "https://github.com/Interveil/wallet-sdk"
+keywords = ["wallet", "multichain", "ethereum", "solana", "privacy"]
+categories = ["cryptography::cryptocurrencies"]
 
 [dependencies]
 wallet-core = "0.1.0"
