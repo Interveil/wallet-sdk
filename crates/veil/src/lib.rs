@@ -15,6 +15,10 @@ pub enum VeilError {
 /// Derives the spending key at index 0.
 ///
 /// `sk_0 = H(seed || 0)` using Blake3.
+///
+/// # Errors
+///
+/// Returns `VeilError::DerivationFailed` if Blake3 hashing fails.
 pub fn derive_spending_key(seed: &[u8]) -> Result<[u8; 32], VeilError> {
     Ok(keys::derive_key(seed, 0))
 }
@@ -22,6 +26,10 @@ pub fn derive_spending_key(seed: &[u8]) -> Result<[u8; 32], VeilError> {
 /// Derives the viewing key at index 1.
 ///
 /// `sk_1 = H(seed || 1)` using Blake3.
+///
+/// # Errors
+///
+/// Returns `VeilError::DerivationFailed` if Blake3 hashing fails.
 pub fn derive_viewing_key(seed: &[u8]) -> Result<[u8; 32], VeilError> {
     Ok(keys::derive_key(seed, 1))
 }
@@ -29,6 +37,10 @@ pub fn derive_viewing_key(seed: &[u8]) -> Result<[u8; 32], VeilError> {
 /// Derives the nullifier key at index 2.
 ///
 /// `sk_2 = H(seed || 2)` using Blake3.
+///
+/// # Errors
+///
+/// Returns `VeilError::DerivationFailed` if Blake3 hashing fails.
 pub fn derive_nullifier_key(seed: &[u8]) -> Result<[u8; 32], VeilError> {
     Ok(keys::derive_key(seed, 2))
 }
@@ -39,6 +51,11 @@ pub fn derive_nullifier_key(seed: &[u8]) -> Result<[u8; 32], VeilError> {
 /// formatted as a Bech32 string with the `pvx` prefix.
 ///
 /// Format: `pvx1...`
+///
+/// # Errors
+///
+/// Returns `VeilError::DerivationFailed` if key derivation fails.
+/// Returns `VeilError::AddressEncodingFailed` if Bech32 encoding fails.
 pub fn derive_private_address(seed: &[u8]) -> Result<String, VeilError> {
     let spending_key = keys::derive_key(seed, 0);
 
