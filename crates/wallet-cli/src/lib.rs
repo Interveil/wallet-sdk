@@ -25,8 +25,14 @@ pub struct Cli {
 pub enum Commands {
     /// Create a new wallet (prints mnemonic once, does not save)
     Create,
-    /// Import wallet from mnemonic phrase
-    Import { mnemonic: String },
+    /// Import wallet from mnemonic phrase (optionally save to vault with --save)
+    Import {
+        mnemonic: String,
+        #[arg(long, short)]
+        save: bool,
+        #[arg(long, short)]
+        password: Option<String>,
+    },
     /// Create and save a new wallet to encrypted vault
     Save {
         #[arg(long, short)]
@@ -119,10 +125,16 @@ pub fn cmd_create() -> Result<()> {
 /// # Errors
 ///
 /// Returns an error if the mnemonic is invalid or address derivation fails.
-pub fn cmd_import(mnemonic: &str) -> Result<()> {
+pub fn cmd_import(mnemonic: &str, save: bool, password: &str) -> Result<()> {
     let wallet = sdk::Wallet::import(mnemonic).context("invalid mnemonic phrase")?;
 
-    println!("Wallet Imported\n");
+    if save {
+        wallet.save(password).context("failed to save wallet")?;
+        println!("Wallet Imported & Saved\n");
+    } else {
+        println!("Wallet Imported\n");
+    }
+
     println!("ETH: {}", wallet.eth_address());
     println!("SOL: {}", wallet.sol_address());
     println!("PVX: {}", wallet.pvx_address());

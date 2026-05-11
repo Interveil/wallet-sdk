@@ -9,7 +9,14 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Commands::Create => cmd_create(),
-        Commands::Import { mnemonic } => cmd_import(&mnemonic),
+        Commands::Import { mnemonic, save, password } => {
+            let pw = if save {
+                Some(resolve_password(password)?)
+            } else {
+                None
+            };
+            cmd_import(&mnemonic, save, pw.as_deref().unwrap_or(""))
+        }
         Commands::Save { password } => cmd_save(&resolve_password(password)?),
         Commands::Load { password } => cmd_load(&resolve_password(password)?),
         Commands::Address { eth, sol, pvx } => cmd_address(eth, sol, pvx),
