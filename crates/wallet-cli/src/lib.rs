@@ -324,7 +324,7 @@ pub fn cmd_verify(password: &str) -> Result<()> {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use sdk::SdkError;
+    use sdk::WalletError;
     use std::sync::Mutex;
 
     static SERIAL: Mutex<()> = Mutex::new(());
@@ -364,7 +364,7 @@ pub(crate) mod tests {
     #[test]
     fn test_import_invalid_mnemonic() {
         let result = sdk::Wallet::import("foo bar baz");
-        assert!(matches!(result, Err(SdkError::InvalidMnemonic)));
+        assert!(matches!(result, Err(WalletError::InvalidMnemonic)));
     }
 
     #[test]

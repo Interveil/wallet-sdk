@@ -1,9 +1,9 @@
-use wallet_core::{Wallet, WalletError};
+use sdk::{Wallet, WalletError};
 
 #[test]
 fn test_create_wallet() {
     let wallet = Wallet::create().unwrap();
-    let words: Vec<&str> = wallet.mnemonic().split_whitespace().collect();
+    let words: Vec<&str> = wallet.mnemonic().unwrap().split_whitespace().collect();
     assert_eq!(words.len(), 12);
     assert_eq!(wallet.seed().len(), 64);
 }
@@ -11,7 +11,7 @@ fn test_create_wallet() {
 #[test]
 fn test_same_mnemonic_same_seed() {
     let wallet1 = Wallet::create().unwrap();
-    let phrase = wallet1.mnemonic().to_string();
+    let phrase = wallet1.mnemonic().unwrap().to_string();
     let wallet2 = Wallet::import(&phrase).unwrap();
     assert_eq!(wallet1.seed(), wallet2.seed());
 }

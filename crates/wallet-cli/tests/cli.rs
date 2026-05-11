@@ -1,5 +1,5 @@
 use std::sync::Mutex;
-use sdk::{SdkError, Wallet};
+use sdk::{Wallet, WalletError};
 
 static SERIAL: Mutex<()> = Mutex::new(());
 
@@ -47,7 +47,7 @@ fn test_import_valid_mnemonic() {
 #[test]
 fn test_import_invalid_mnemonic() {
     let result = Wallet::import("foo bar baz");
-    assert!(matches!(result, Err(SdkError::InvalidMnemonic)));
+    assert!(matches!(result, Err(WalletError::InvalidMnemonic)));
 }
 
 #[test]

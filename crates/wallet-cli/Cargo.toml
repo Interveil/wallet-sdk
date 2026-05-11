@@ -1,10 +1,11 @@
 [package]
 name = "wallet-cli"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
 description = "CLI tool for multichain wallet SDK"
-license = "BSD-3-Clause"
-repository = "https://github.com/Interveil/wallet-sdk"
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
 keywords = ["wallet", "cli", "cryptocurrency"]
 categories = ["command-line-interface"]
 
@@ -14,7 +15,7 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
-sdk = { path = "../sdk" }
+sdk = "0.1.0"
 anyhow = "1"
 dialoguer = "0.11"
 hex = "0.4"

@@ -5,7 +5,6 @@ use rand::RngCore;
 use std::fs;
 use std::path::Path;
 use thiserror::Error;
-use wallet_core::Wallet;
 use zeroize::Zeroizing;
 
 const VERSION_LEGACY: u8 = 0x01;
@@ -60,16 +59,16 @@ fn derive_key(password: &str, salt: &[u8]) -> Result<Zeroizing<[u8; KEY_LEN]>, S
 /// derivation fails. Returns `StorageError::IoError` for I/O failures.
 pub fn save_wallet(
     path: impl AsRef<Path>,
-    wallet: &Wallet,
+    seed: &[u8],
+    mnemonic: Option<&str>,
     password: &str,
 ) -> Result<(), StorageError> {
-    let seed = wallet.seed();
-    let mnemonic = wallet.mnemonic();
 
     // Encode: [seed_len:u32 LE][seed bytes][mnemonic_len:u32 LE][mnemonic bytes]
     let seed_len = u32::try_from(seed.len()).unwrap_or(u32::MAX);
-    let mnemonic_bytes = mnemonic.as_bytes();
-    let mnemonic_len = u32::try_from(mnemonic_bytes.len()).unwrap_or(u32::MAX);
+    let mnemonic_str = mnemonic.unwrap_or("");
+    let mnemonic_len = u32::try_from(mnemonic_str.len()).unwrap_or(u32::MAX);
+    let mnemonic_bytes = mnemonic_str.as_bytes();
 
     let mut plaintext = Vec::with_capacity(4 + seed.len() + 4 + mnemonic_bytes.len());
     plaintext.extend_from_slice(&seed_len.to_le_bytes());
@@ -102,10 +101,12 @@ pub fn save_wallet(
     Ok(())
 }
 
-/// Decrypts a wallet vault file and reconstructs the wallet.
+/// Decrypts a wallet vault file and returns the raw seed and optional mnemonic.
 ///
 /// Supports both the legacy v0x01 (seed-only) and v0x02 (seed + mnemonic)
 /// formats.
+///
+/// Returns `(seed_bytes, optional_mnemonic)`.
 ///
 /// # Errors
 ///
@@ -113,7 +114,10 @@ pub fn save_wallet(
 /// Returns `StorageError::DecryptionFailed` if the password is wrong or
 /// the ciphertext has been tampered with.
 /// Returns `StorageError::IoError` for I/O failures.
-pub fn load_wallet(path: impl AsRef<Path>, password: &str) -> Result<Wallet, StorageError> {
+pub fn load_wallet(
+    path: impl AsRef<Path>,
+    password: &str,
+) -> Result<(Vec<u8>, Option<String>), StorageError> {
     let data = fs::read(path.as_ref())?;
 
     if data.len() < MIN_FILE_LEN {
@@ -140,7 +144,7 @@ pub fn load_wallet(path: impl AsRef<Path>, password: &str) -> Result<Wallet, Sto
 
     if data[0] == VERSION_LEGACY {
         // v0x01: the entire plaintext is the seed, no mnemonic
-        return Ok(Wallet::from_seed(plaintext, None));
+        return Ok((plaintext, None));
     }
 
     // v0x02: [seed_len:u32 LE][seed][mnemonic_len:u32 LE][mnemonic]
@@ -160,7 +164,7 @@ pub fn load_wallet(path: impl AsRef<Path>, password: &str) -> Result<Wallet, Sto
         return Err(StorageError::CorruptedFile);
     }
 
-    let seed = &plaintext[4..4 + seed_len];
+    let seed = plaintext[4..4 + seed_len].to_vec();
     let mnemonic = if mnemonic_len > 0 {
         Some(
             String::from_utf8(plaintext[4 + seed_len + 4..].to_vec())
@@ -170,5 +174,5 @@ pub fn load_wallet(path: impl AsRef<Path>, password: &str) -> Result<Wallet, Sto
         None
     };
 
-    Ok(Wallet::from_seed(seed.to_vec(), mnemonic))
+    Ok((seed, mnemonic))
 }

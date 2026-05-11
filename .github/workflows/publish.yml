@@ -10,11 +10,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -28,35 +25,27 @@ jobs:
       - name: Login to crates.io
         run: cargo login ${{ secrets.CARGO_TOKEN }}
 
-      # =========================
-      # STEP 1 — CORE LAYER
-      # =========================
-      - name: Publish wallet-core
-        run: cargo publish -p wallet-core
+      # DAG: storage → eth/sol/veil → sdk → wallet-cli
+      # eth/sol/veil are independent — can run in parallel
 
-      # =========================
-      # STEP 2 — CHAIN MODULES
-      # =========================
-      - name: Publish ETH / SOL / VEIL
-        run: |
-          cargo publish -p eth
-          cargo publish -p sol
-          cargo publish -p pvx
-
-      # =========================
-      # STEP 3 — STORAGE
-      # =========================
-      - name: Publish vault
+      - name: Publish storage
         run: cargo publish -p storage
 
-      # =========================
-      # STEP 4 — SDK LAYER
-      # =========================
-      - name: Publish wallet-sdk
-        run: cargo publish -p sdk
+      - name: Publish eth / sol / veil
+        run: |
+          sleep 30
+          cargo publish -p eth
+          sleep 15
+          cargo publish -p sol
+          sleep 15
+          cargo publish -p veil
 
-      # =========================
-      # STEP 5 — CLI TOOL
-      # =========================
+      - name: Publish sdk
+        run: |
+          sleep 30
+          cargo publish -p sdk
+
       - name: Publish wallet-cli
-        run: cargo publish -p wallet-cli
+        run: |
+          sleep 30
+          cargo publish -p wallet-cli

@@ -10,6 +10,10 @@ cargo build --release -p wallet-cli
 
 The binary is named `wallet`.
 
+```bash
+cargo install --path crates/wallet-cli
+```
+
 ## Usage
 
 ```
