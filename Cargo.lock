@@ -525,11 +525,11 @@ name = "eth"
 version = "0.1.0"
 dependencies = [
  "bip32",
+ "bip39",
  "hex",
  "k256",
  "thiserror 2.0.18",
  "tiny-keccak",
- "wallet-core",
 ]
 
 [[package]]
@@ -919,6 +919,7 @@ dependencies = [
 name = "sdk"
 version = "0.1.0"
 dependencies = [
+ "bip39",
  "ed25519-dalek",
  "eth",
  "k256",
@@ -927,7 +928,6 @@ dependencies = [
  "storage",
  "thiserror 2.0.18",
  "veil",
- "wallet-core",
  "zeroize",
 ]
 
@@ -1048,12 +1048,12 @@ dependencies = [
 name = "sol"
 version = "0.1.0"
 dependencies = [
+ "bip39",
  "bs58",
  "ed25519-dalek",
  "hmac",
  "sha2",
  "thiserror 2.0.18",
- "wallet-core",
 ]
 
 [[package]]
@@ -1072,9 +1072,9 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "argon2",
+ "bip39",
  "rand",
  "thiserror 2.0.18",
- "wallet-core",
  "zeroize",
 ]
 
@@ -1232,10 +1232,10 @@ name = "veil"
 version = "0.1.0"
 dependencies = [
  "bech32",
+ "bip39",
  "blake3",
  "ed25519-dalek",
  "thiserror 2.0.18",
- "wallet-core",
 ]
 
 [[package]]
@@ -1256,15 +1256,6 @@ dependencies = [
  "hex",
  "rand",
  "sdk",
-]
-
-[[package]]
-name = "wallet-core"
-version = "0.1.0"
-dependencies = [
- "bip39",
- "thiserror 2.0.18",
- "zeroize",
 ]
 
 [[package]]

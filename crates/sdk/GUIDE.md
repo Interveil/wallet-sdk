@@ -18,20 +18,17 @@ sdk = { path = "crates/sdk" }
 ## Quick Start
 
 ```rust
-use sdk::{Chain, Wallet, Session, SdkError};
+use sdk::{Chain, Session, Wallet, WalletError};
 
-fn main() -> Result<(), SdkError> {
-    // Create a new random wallet
+fn main() -> Result<(), WalletError> {
     let wallet = Wallet::create()?;
 
     println!("ETH: {}", wallet.eth_address());
     println!("SOL: {}", wallet.sol_address());
     println!("PVX: {}", wallet.pvx_address());
 
-    // Unlock into a signing session
     let session = Session::from_wallet(wallet)?;
 
-    // Sign a message (Solana Ed25519)
     let sig = session.sign(b"hello world", Chain::Sol)?;
     println!("Signature ({} bytes): {:?}", sig.len(), sig);
 
@@ -174,7 +171,7 @@ Nonces work identically for `Chain::Eth`.
 ## Error handling
 
 ```rust
-use sdk::SdkError;
+use sdk::WalletError;
 ```
 
 | Variant | Meaning |
@@ -190,7 +187,7 @@ use sdk::SdkError;
 
 ```rust
 match result {
-    Err(SdkError::InvalidMessage) => eprintln!("Message cannot be empty"),
+    Err(WalletError::InvalidMessage) => eprintln!("Message cannot be empty"),
     Err(e) => eprintln!("Error: {e}"),
     Ok(sig) => println!("Signature: {sig:02x?}"),
 }
@@ -201,10 +198,10 @@ match result {
 ## Full workflow example
 
 ```rust
-use sdk::{Chain, Wallet, Session, SdkError};
+use sdk::{Chain, Wallet, Session, WalletError};
 use std::fs;
 
-fn main() -> Result<(), SdkError> {
+fn main() -> Result<(), WalletError> {
     // 1. Create or import
     let wallet = Wallet::create()?;
     println!("Mnemonic: {:?}", wallet.mnemonic());

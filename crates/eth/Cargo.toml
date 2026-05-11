@@ -1,10 +1,11 @@
 [package]
 name = "eth"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
 description = "Ethereum address derivation module"
-license = "BSD-3-Clause"
-repository = "https://github.com/Interveil/wallet-sdk"
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
 keywords = ["ethereum", "address", "bip44", "cryptocurrency"]
 categories = ["cryptography::cryptocurrencies"]
 
@@ -16,4 +17,4 @@ hex = "0.4"
 thiserror = "2"
 
 [dev-dependencies]
-wallet-core = "0.1.0"
+bip39 = "2.2"

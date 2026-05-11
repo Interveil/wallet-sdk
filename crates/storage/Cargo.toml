@@ -1,17 +1,20 @@
 [package]
 name = "storage"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
 description = "Encrypted wallet storage (AES-256-GCM + Argon2)"
-license = "BSD-3-Clause"
-repository = "https://github.com/Interveil/wallet-sdk"
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
 keywords = ["wallet", "encryption", "aes-gcm", "argon2", "cryptocurrency"]
 categories = ["cryptography::cryptocurrencies"]
 
 [dependencies]
-wallet-core = "0.1.0"
 aes-gcm = "0.10"
 argon2 = "0.5"
 rand = "0.8"
 zeroize = { version = "1", features = ["zeroize_derive"] }
 thiserror = "2"
+
+[dev-dependencies]
+bip39 = "2.2"

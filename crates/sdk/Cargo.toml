@@ -1,15 +1,16 @@
 [package]
 name = "sdk"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
 description = "Multichain wallet SDK with ETH, SOL, and PVX support"
-license = "BSD-3-Clause"
-repository = "https://github.com/Interveil/wallet-sdk"
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
 keywords = ["wallet", "multichain", "ethereum", "solana", "privacy"]
 categories = ["cryptography::cryptocurrencies"]
 
 [dependencies]
-wallet-core = "0.1.0"
+bip39 = { version = "2.2", features = ["rand"] }
 eth = "0.1.0"
 sol = "0.1.0"
 veil = "0.1.0"

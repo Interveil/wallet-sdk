@@ -1,5 +1,5 @@
 use std::sync::Mutex;
-use sdk::{Chain, SdkError, Session, Wallet};
+use sdk::{Chain, Session, Wallet, WalletError};
 
 static SERIAL: Mutex<()> = Mutex::new(());
 
@@ -65,7 +65,7 @@ fn test_different_seed_different_addresses() {
 #[test]
 fn test_invalid_mnemonic_fails() {
     let result = Wallet::import("foo bar baz");
-    assert!(matches!(result, Err(SdkError::InvalidMnemonic)));
+    assert!(matches!(result, Err(WalletError::InvalidMnemonic)));
 }
 
 #[test]
@@ -92,7 +92,46 @@ fn test_wrong_password_fails_load() {
         wallet.save("correct-password").unwrap();
 
         let result = Wallet::load("wrong-password");
-        assert!(matches!(result, Err(SdkError::InvalidPassword)));
+        assert!(matches!(result, Err(WalletError::InvalidPassword)));
+    });
+}
+
+#[test]
+fn test_save_to_load_from_custom_path() {
+    with_isolated_dir("sdk_custom_path", || {
+        let wallet = Wallet::create().unwrap();
+        let eth = wallet.eth_address().to_string();
+        let path = "my-custom-wallet.dat";
+
+        wallet.save_to(path, "pw").unwrap();
+
+        let loaded = Wallet::load_from(path, "pw").unwrap();
+        assert_eq!(eth, loaded.eth_address());
+        assert_eq!(wallet.mnemonic(), loaded.mnemonic());
+    });
+}
+
+#[test]
+fn test_create_save_roundtrip() {
+    with_isolated_dir("sdk_create_save", || {
+        let wallet = Wallet::create_save("pw").unwrap();
+        let loaded = Wallet::load("pw").unwrap();
+        assert_eq!(wallet.eth_address(), loaded.eth_address());
+        assert_eq!(wallet.sol_address(), loaded.sol_address());
+        assert_eq!(wallet.pvx_address(), loaded.pvx_address());
+        assert_eq!(wallet.mnemonic(), loaded.mnemonic());
+    });
+}
+
+#[test]
+fn test_import_save_roundtrip() {
+    with_isolated_dir("sdk_import_save", || {
+        let phrase =
+            "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+        let wallet = Wallet::import_save(phrase, "pw").unwrap();
+        let loaded = Wallet::load("pw").unwrap();
+        assert_eq!(wallet.eth_address(), loaded.eth_address());
+        assert_eq!(wallet.mnemonic(), loaded.mnemonic());
     });
 }
 
@@ -236,13 +275,13 @@ fn test_sign_with_nonce_differs() {
 fn test_sign_empty_message_fails() {
     let session = test_session();
     let result = session.sign(b"", Chain::Sol);
-    assert!(matches!(result, Err(SdkError::InvalidMessage)));
+    assert!(matches!(result, Err(WalletError::InvalidMessage)));
 
     let result = session.sign_with_nonce(b"", Chain::Eth, b"nonce");
-    assert!(matches!(result, Err(SdkError::InvalidMessage)));
+    assert!(matches!(result, Err(WalletError::InvalidMessage)));
 
     let result = session.sign(b"", Chain::Eth);
-    assert!(matches!(result, Err(SdkError::InvalidMessage)));
+    assert!(matches!(result, Err(WalletError::InvalidMessage)));
 }
 
 #[test]

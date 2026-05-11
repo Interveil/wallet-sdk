@@ -5,36 +5,46 @@ use storage::{StorageError, load_wallet, save_wallet};
 
 // Must match storage::HEADER_LEN (1 + 16 + 12)
 const HEADER_LEN: usize = 29;
-use wallet_core::Wallet;
 
 static TEST_CTR: AtomicU32 = AtomicU32::new(0);
+
+const TEST_MNEMONIC: &str =
+    "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
 fn test_path(name: &str) -> PathBuf {
     let n = TEST_CTR.fetch_add(1, Ordering::SeqCst);
     std::env::temp_dir().join(format!("test_{}_{}.dat", name, n))
 }
 
+fn dummy_seed() -> Vec<u8> {
+    // Derive a deterministic 64-byte seed from the test mnemonic
+    use std::str::FromStr;
+    let mnemonic = bip39::Mnemonic::from_str(TEST_MNEMONIC).unwrap();
+    mnemonic.to_seed("").to_vec()
+}
+
 #[test]
 fn test_save_load_roundtrip() {
-    let wallet = Wallet::create().unwrap();
+    let seed = dummy_seed();
     let path = test_path("roundtrip");
     let password = "correct-horse-battery-staple";
+    let mnemonic = Some(TEST_MNEMONIC);
 
-    save_wallet(&path, &wallet, password).unwrap();
-    let loaded = load_wallet(&path, password).unwrap();
+    save_wallet(&path, &seed, mnemonic, password).unwrap();
+    let (loaded_seed, loaded_mnemonic) = load_wallet(&path, password).unwrap();
 
-    assert_eq!(wallet.seed(), loaded.seed());
-    assert_eq!(loaded.mnemonic(), wallet.mnemonic());
+    assert_eq!(loaded_seed, seed);
+    assert_eq!(loaded_mnemonic.as_deref(), mnemonic);
 
     let _ = fs::remove_file(&path);
 }
 
 #[test]
 fn test_wrong_password_fails() {
-    let wallet = Wallet::create().unwrap();
+    let seed = dummy_seed();
     let path = test_path("wrong_pw");
 
-    save_wallet(&path, &wallet, "correct-password").unwrap();
+    save_wallet(&path, &seed, None, "correct-password").unwrap();
     let result = load_wallet(&path, "wrong-password");
 
     assert!(matches!(result, Err(StorageError::DecryptionFailed)));
@@ -44,10 +54,10 @@ fn test_wrong_password_fails() {
 
 #[test]
 fn test_corrupted_ciphertext_fails() {
-    let wallet = Wallet::create().unwrap();
+    let seed = dummy_seed();
     let path = test_path("corrupt");
 
-    save_wallet(&path, &wallet, "password").unwrap();
+    save_wallet(&path, &seed, None, "password").unwrap();
 
     let mut data = fs::read(&path).unwrap();
     // Flip a byte in the ciphertext area
@@ -62,10 +72,10 @@ fn test_corrupted_ciphertext_fails() {
 
 #[test]
 fn test_format_structure() {
-    let wallet = Wallet::create().unwrap();
+    let seed = dummy_seed();
     let path = test_path("format");
 
-    save_wallet(&path, &wallet, "password").unwrap();
+    save_wallet(&path, &seed, None, "password").unwrap();
 
     let data = fs::read(&path).unwrap();
 

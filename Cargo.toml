@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/wallet-core", "crates/eth", "crates/sol", "crates/veil", "crates/storage", "crates/sdk", "crates/wallet-cli"]
+members = ["crates/eth", "crates/sol", "crates/veil", "crates/storage", "crates/sdk", "crates/wallet-cli"]
 resolver = "2"
 
 [workspace.package]
@@ -10,7 +10,7 @@ repository = "https://github.com/Interveil/wallet-sdk"
 authors =  ["Lika"]
 
 [patch.crates-io]
-wallet-core = { path = "crates/wallet-core" }
+sdk = { path = "crates/sdk" }
 eth = { path = "crates/eth" }
 sol = { path = "crates/sol" }
 veil = { path = "crates/veil" }
