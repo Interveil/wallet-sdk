@@ -5,6 +5,8 @@ edition = "2024"
 description = "PVX privacy identity system for multichain wallet"
 license = "BSD-3-Clause"
 repository = "https://github.com/Interveil/wallet-sdk"
+keywords = ["privacy", "shielded", "address", "cryptocurrency"]
+categories = ["cryptography::cryptocurrencies"]
 
 [dependencies]
 wallet-core = "0.1.0"

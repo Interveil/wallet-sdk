@@ -1,6 +1,3 @@
-// Allow GenericArray::from_slice deprecation (generic-array 0.14 → 1.x migration)
-#![allow(deprecated)]
-
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce};
 use argon2::Argon2;
@@ -53,6 +50,13 @@ fn derive_key(password: &str, salt: &[u8]) -> Result<Zeroizing<[u8; KEY_LEN]>, S
     Ok(key)
 }
 
+/// Encrypts the wallet seed with AES-256-GCM (Argon2id key derivation)
+/// and writes the vault to disk.
+///
+/// # Errors
+///
+/// Returns `StorageError::DecryptionFailed` if encryption or key
+/// derivation fails. Returns `StorageError::IoError` for I/O failures.
 pub fn save_wallet(
     path: impl AsRef<Path>,
     wallet: &Wallet,
@@ -69,6 +73,7 @@ pub fn save_wallet(
 
     let cipher =
         Aes256Gcm::new_from_slice(key.as_ref()).map_err(|_| StorageError::DecryptionFailed)?;
+    #[allow(deprecated)]
     let nonce_ref = Nonce::from_slice(&nonce);
     let ciphertext = cipher
         .encrypt(nonce_ref, seed)
@@ -84,6 +89,14 @@ pub fn save_wallet(
     Ok(())
 }
 
+/// Decrypts a wallet vault file and reconstructs the wallet from its seed.
+///
+/// # Errors
+///
+/// Returns `StorageError::CorruptedFile` if the file format is invalid.
+/// Returns `StorageError::DecryptionFailed` if the password is wrong or
+/// the ciphertext has been tampered with.
+/// Returns `StorageError::IoError` for I/O failures.
 pub fn load_wallet(path: impl AsRef<Path>, password: &str) -> Result<Wallet, StorageError> {
     let data = fs::read(path.as_ref())?;
 
@@ -94,7 +107,7 @@ pub fn load_wallet(path: impl AsRef<Path>, password: &str) -> Result<Wallet, Sto
         return Err(StorageError::CorruptedFile);
     }
 
-    let salt = &data[1..1 + SALT_LEN];
+    let salt = &data[1..=SALT_LEN];
     let nonce = &data[1 + SALT_LEN..HEADER_LEN];
     let ciphertext = &data[HEADER_LEN..];
 
@@ -102,6 +115,7 @@ pub fn load_wallet(path: impl AsRef<Path>, password: &str) -> Result<Wallet, Sto
 
     let cipher =
         Aes256Gcm::new_from_slice(key.as_ref()).map_err(|_| StorageError::DecryptionFailed)?;
+    #[allow(deprecated)]
     let nonce_ref = Nonce::from_slice(nonce);
     let seed = cipher
         .decrypt(nonce_ref, ciphertext)

@@ -1262,6 +1262,7 @@ version = "0.1.0"
 dependencies = [
  "bip39",
  "thiserror 2.0.18",
+ "zeroize",
 ]
 
 [[package]]

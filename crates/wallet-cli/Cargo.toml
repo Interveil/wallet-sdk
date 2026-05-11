@@ -5,6 +5,8 @@ edition = "2024"
 description = "CLI tool for multichain wallet SDK"
 license = "BSD-3-Clause"
 repository = "https://github.com/Interveil/wallet-sdk"
+keywords = ["wallet", "cli", "cryptocurrency"]
+categories = ["command-line-interface"]
 
 [[bin]]
 name = "wallet"
