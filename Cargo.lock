@@ -919,9 +919,12 @@ dependencies = [
 name = "sdk"
 version = "0.1.0"
 dependencies = [
+ "bech32",
  "bip39",
+ "bs58",
  "ed25519-dalek",
  "eth",
+ "hex",
  "k256",
  "sha2",
  "sol",

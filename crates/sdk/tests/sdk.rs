@@ -136,6 +136,55 @@ fn test_import_save_roundtrip() {
 }
 
 // ---------------------------------------------------------------------------
+// Export tests
+// ---------------------------------------------------------------------------
+
+const GOLDEN_MNEMONIC: &str =
+    "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+
+#[test]
+fn test_export_seed_matches() {
+    let wallet = Wallet::import(GOLDEN_MNEMONIC).unwrap();
+    let exported = wallet.export_seed().unwrap();
+    assert_eq!(*exported, GOLDEN_MNEMONIC);
+}
+
+#[test]
+fn test_export_seed_from_loaded_vault() {
+    with_isolated_dir("export_seed_vault", || {
+        let wallet = Wallet::import_save(GOLDEN_MNEMONIC, "pw").unwrap();
+        let loaded = Wallet::load("pw").unwrap();
+        let exported = loaded.export_seed().unwrap();
+        assert_eq!(*exported, GOLDEN_MNEMONIC, "mnemonic preserved through save/load");
+    });
+}
+
+#[test]
+fn test_export_eth_private_key_format() {
+    let wallet = Wallet::import(GOLDEN_MNEMONIC).unwrap();
+    let key = wallet.export_eth_private_key().unwrap();
+    assert!(key.starts_with("0x"), "ETH key must start with 0x");
+    assert_eq!(key.len(), 66, "0x + 64 hex chars = 66");
+    // All characters after 0x must be valid hex
+    hex::decode(&key[2..]).expect("ETH key must be valid hex");
+}
+
+#[test]
+fn test_export_sol_private_key_format() {
+    let wallet = Wallet::import(GOLDEN_MNEMONIC).unwrap();
+    let key = wallet.export_sol_private_key().unwrap();
+    let decoded = bs58::decode(&*key).into_vec().expect("SOL key must be valid base58");
+    assert_eq!(decoded.len(), 32, "SOL key must decode to 32 bytes");
+}
+
+#[test]
+fn test_export_pvx_spending_key_format() {
+    let wallet = Wallet::import(GOLDEN_MNEMONIC).unwrap();
+    let key = wallet.export_pvx_spending_key().unwrap();
+    assert!(key.starts_with("pvxsk1"), "PVX key must start with pvxsk1");
+}
+
+// ---------------------------------------------------------------------------
 // Session / signing tests
 // ---------------------------------------------------------------------------
 

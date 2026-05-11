@@ -48,9 +48,11 @@ Holds the BIP-39 seed and derived addresses. All secret material is zeroed on dr
 ### Creating / importing
 
 | Method | Description |
-|---|---|
+|---|---|---|
 | `Wallet::create()` | Generate a new random 12-word BIP-39 wallet |
 | `Wallet::import(mnemonic)` | Recover from an existing BIP-39 mnemonic phrase |
+| `Wallet::create_save(password)` | Create and persist to `wallet.dat` in one step |
+| `Wallet::import_save(mnemonic, password)` | Import and persist to `wallet.dat` in one step |
 
 ```rust
 let wallet = Wallet::create()?;
@@ -58,6 +60,9 @@ let wallet = Wallet::create()?;
 let wallet = Wallet::import(
     "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 )?;
+
+// One-step creation + persistence
+let wallet = Wallet::create_save("my-password")?;
 ```
 
 ### Addresses
@@ -83,16 +88,35 @@ if let Some(phrase) = wallet.mnemonic() {
 Saves/loads the encrypted wallet to/from `wallet.dat` in the current directory. Uses AES-256-GCM with Argon2id key derivation. The mnemonic is preserved inside the vault (format v0x02).
 
 ```rust
-// Save
+// Save / load with default path (wallet.dat)
 wallet.save("my-secure-password")?;
-
-// Load
 let wallet = Wallet::load("my-secure-password")?;
+
+// Save / load with custom path
+wallet.save_to("backup.dat", "my-secure-password")?;
+let wallet = Wallet::load_from("backup.dat", "my-secure-password")?;
+```
+
+### Exporting secrets
+
+Returns secrets as `Zeroizing<String>` — zeroed on drop, can't be accidentally `Debug` printed.
+
+```rust
+// Seed phrase
+if let Some(phrase) = wallet.export_seed() {
+    println!("Backup phrase: {phrase}");
+    // phrase is zeroed when it goes out of scope
+}
+
+// Chain private keys (human-readable format)
+let eth_key = wallet.export_eth_private_key()?;    // "0x4f3e...a1b2"
+let sol_key = wallet.export_sol_private_key()?;    // "2xs7...9f3k" (base58)
+let pvx_key = wallet.export_pvx_spending_key()?;   // "pvxsk1qyp...u8q" (bech32)
 ```
 
 ### Raw private keys (advanced)
 
-Derive chain-specific private keys from the seed. Prefer using `Session::sign()` instead of handling keys directly.
+Derive chain-specific private keys from the seed as raw `[u8; 32]`. Prefer `export_*` or `Session::sign()` instead.
 
 ```rust
 let eth_key: [u8; 32] = wallet.eth_private_key()?;   // secp256k1
@@ -202,41 +226,39 @@ use sdk::{Chain, Wallet, Session, WalletError};
 use std::fs;
 
 fn main() -> Result<(), WalletError> {
-    // 1. Create or import
-    let wallet = Wallet::create()?;
-    println!("Mnemonic: {:?}", wallet.mnemonic());
+    // 1. Create and persist in one step
+    let wallet = Wallet::create_save("strong-password")?;
     println!("SOL address: {}", wallet.sol_address());
 
-    // 2. Persist to encrypted vault
-    wallet.save("strong-password")?;
-
-    // 3. Later: load from vault
+    // 2. Later: load from vault
     let loaded = Wallet::load("strong-password")?;
     assert_eq!(loaded.sol_address(), wallet.sol_address());
 
-    // 4. Unlock into signing session
+    // 3. Export seed phrase (Zeroizing<String> — zeroed on drop)
+    if let Some(phrase) = loaded.export_seed() {
+        println!("Seed phrase: {phrase}");
+    }
+
+    // 4. Export formatted private keys
+    let eth_key = loaded.export_eth_private_key()?;
+    let sol_key = loaded.export_sol_private_key()?;
+    println!("ETH key: {eth_key}");
+    println!("SOL key: {sol_key}");
+
+    // 5. Unlock into signing session
     let session = Session::from_wallet(loaded)?;
 
-    // 5. Sign with nonce (Solana)
-    let sig_sol = session.sign_with_nonce(
+    // 6. Sign with nonce
+    let sig = session.sign_with_nonce(
         b"transfer 10 SOL to alice",
         Chain::Sol,
         b"tx-nonce-001",
     )?;
-    println!("SOL signature ({} bytes)", sig_sol.len());
-
-    // 6. Sign with nonce (Ethereum)
-    let sig_eth = session.sign_with_nonce(
-        b"transfer 1 ETH to bob",
-        Chain::Eth,
-        b"tx-nonce-001",
-    )?;
-    println!("ETH signature ({} bytes)", sig_eth.len());
+    println!("Signature ({} bytes)", sig.len());
 
     // 7. Lock — keys are zeroed
     session.lock()?;
 
-    // Clean up test file
     let _ = fs::remove_file("wallet.dat");
     Ok(())
 }
@@ -246,8 +268,8 @@ fn main() -> Result<(), WalletError> {
 
 ## Security notes
 
-- **Never log private keys or seeds.** The `Session` API keeps keys internal — `sign()` never exposes them.
-- **Secrets are zeroed on drop.** `Wallet` and `Session` use `Zeroizing` wrappers that clear memory when the value is dropped.
+- **Never log private keys or seeds.** The `Session` API keeps keys internal — `sign()` never exposes them. Export methods return `Zeroizing<String>` which can't be `Debug` printed without explicit `.expose()`.
+- **Secrets are zeroed on drop.** `Wallet`, `Session`, and export return types use `Zeroizing` wrappers that clear memory when the value is dropped.
 - **Session lifecycle.** Call `from_wallet()` to unlock, `lock()` to consume and zero. Keeping sessions alive unnecessarily increases the window for memory-scraping attacks.
-- **Mnemonic exposure.** The mnemonic is returned from `wallet.mnemonic()` only after `create()` / `import()`. After `save()` + `load()`, it is still available because the vault preserves it (v0x02 format).
+- **Export methods don't require a password.** The `Wallet` instance is the authorization boundary — you needed the vault password to load it. Adding a password parameter to export methods would create a false sense of security (the seed is already in memory).
 - **No blockchain I/O.** This SDK only does crypto. Transaction building, RPC calls, and network interactions belong in a separate layer.
