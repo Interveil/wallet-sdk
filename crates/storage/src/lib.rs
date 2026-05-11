@@ -8,7 +8,8 @@ use thiserror::Error;
 use wallet_core::Wallet;
 use zeroize::Zeroizing;
 
-const VERSION: u8 = 0x01;
+const VERSION_LEGACY: u8 = 0x01;
+const VERSION_MNEMONIC: u8 = 0x02;
 const SALT_LEN: usize = 16;
 const NONCE_LEN: usize = 12;
 const HEADER_LEN: usize = 1 + SALT_LEN + NONCE_LEN;
@@ -50,8 +51,8 @@ fn derive_key(password: &str, salt: &[u8]) -> Result<Zeroizing<[u8; KEY_LEN]>, S
     Ok(key)
 }
 
-/// Encrypts the wallet seed with AES-256-GCM (Argon2id key derivation)
-/// and writes the vault to disk.
+/// Encrypts the wallet seed (and mnemonic, if available) with AES-256-GCM
+/// and writes the vault to disk using the v0x02 format.
 ///
 /// # Errors
 ///
@@ -63,6 +64,18 @@ pub fn save_wallet(
     password: &str,
 ) -> Result<(), StorageError> {
     let seed = wallet.seed();
+    let mnemonic = wallet.mnemonic();
+
+    // Encode: [seed_len:u32 LE][seed bytes][mnemonic_len:u32 LE][mnemonic bytes]
+    let seed_len = u32::try_from(seed.len()).unwrap_or(u32::MAX);
+    let mnemonic_bytes = mnemonic.as_bytes();
+    let mnemonic_len = u32::try_from(mnemonic_bytes.len()).unwrap_or(u32::MAX);
+
+    let mut plaintext = Vec::with_capacity(4 + seed.len() + 4 + mnemonic_bytes.len());
+    plaintext.extend_from_slice(&seed_len.to_le_bytes());
+    plaintext.extend_from_slice(seed);
+    plaintext.extend_from_slice(&mnemonic_len.to_le_bytes());
+    plaintext.extend_from_slice(mnemonic_bytes);
 
     let mut salt = [0u8; SALT_LEN];
     let mut nonce = [0u8; NONCE_LEN];
@@ -76,11 +89,11 @@ pub fn save_wallet(
     #[allow(deprecated)]
     let nonce_ref = Nonce::from_slice(&nonce);
     let ciphertext = cipher
-        .encrypt(nonce_ref, seed)
+        .encrypt(nonce_ref, &*plaintext)
         .map_err(|_| StorageError::DecryptionFailed)?;
 
     let mut buf = Vec::with_capacity(HEADER_LEN + ciphertext.len());
-    buf.push(VERSION);
+    buf.push(VERSION_MNEMONIC);
     buf.extend_from_slice(&salt);
     buf.extend_from_slice(&nonce);
     buf.extend_from_slice(&ciphertext);
@@ -89,7 +102,10 @@ pub fn save_wallet(
     Ok(())
 }
 
-/// Decrypts a wallet vault file and reconstructs the wallet from its seed.
+/// Decrypts a wallet vault file and reconstructs the wallet.
+///
+/// Supports both the legacy v0x01 (seed-only) and v0x02 (seed + mnemonic)
+/// formats.
 ///
 /// # Errors
 ///
@@ -103,8 +119,9 @@ pub fn load_wallet(path: impl AsRef<Path>, password: &str) -> Result<Wallet, Sto
     if data.len() < MIN_FILE_LEN {
         return Err(StorageError::CorruptedFile);
     }
-    if data[0] != VERSION {
-        return Err(StorageError::CorruptedFile);
+    match data[0] {
+        VERSION_LEGACY | VERSION_MNEMONIC => {}
+        _ => return Err(StorageError::CorruptedFile),
     }
 
     let salt = &data[1..=SALT_LEN];
@@ -117,9 +134,41 @@ pub fn load_wallet(path: impl AsRef<Path>, password: &str) -> Result<Wallet, Sto
         Aes256Gcm::new_from_slice(key.as_ref()).map_err(|_| StorageError::DecryptionFailed)?;
     #[allow(deprecated)]
     let nonce_ref = Nonce::from_slice(nonce);
-    let seed = cipher
+    let plaintext = cipher
         .decrypt(nonce_ref, ciphertext)
         .map_err(|_| StorageError::DecryptionFailed)?;
 
-    Ok(Wallet::from_seed(seed))
+    if data[0] == VERSION_LEGACY {
+        // v0x01: the entire plaintext is the seed, no mnemonic
+        return Ok(Wallet::from_seed(plaintext, None));
+    }
+
+    // v0x02: [seed_len:u32 LE][seed][mnemonic_len:u32 LE][mnemonic]
+    if plaintext.len() < 8 {
+        return Err(StorageError::CorruptedFile);
+    }
+    let seed_len = u32::from_le_bytes(
+        plaintext[..4].try_into().map_err(|_| StorageError::CorruptedFile)?,
+    ) as usize;
+    let mnemonic_len = u32::from_le_bytes(
+        plaintext[4 + seed_len..4 + seed_len + 4]
+            .try_into()
+            .map_err(|_| StorageError::CorruptedFile)?,
+    ) as usize;
+
+    if 4 + seed_len + 4 + mnemonic_len != plaintext.len() {
+        return Err(StorageError::CorruptedFile);
+    }
+
+    let seed = &plaintext[4..4 + seed_len];
+    let mnemonic = if mnemonic_len > 0 {
+        Some(
+            String::from_utf8(plaintext[4 + seed_len + 4..].to_vec())
+                .map_err(|_| StorageError::CorruptedFile)?,
+        )
+    } else {
+        None
+    };
+
+    Ok(Wallet::from_seed(seed.to_vec(), mnemonic))
 }
