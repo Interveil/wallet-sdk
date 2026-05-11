@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use wallet_cli::{
     cmd_address, cmd_create, cmd_export_private_key, cmd_export_seed, cmd_import, cmd_load,
-    cmd_lock, cmd_save, cmd_unlock, cmd_verify, resolve_password, Cli, Commands,
+    cmd_save, cmd_verify, resolve_password, Cli, Commands,
 };
 
 fn main() -> Result<()> {
@@ -20,10 +20,10 @@ fn main() -> Result<()> {
         Commands::Save { password } => cmd_save(&resolve_password(password)?),
         Commands::Load { password } => cmd_load(&resolve_password(password)?),
         Commands::Address { eth, sol, pvx } => cmd_address(eth, sol, pvx),
-        Commands::Unlock => cmd_unlock(),
-        Commands::Lock => cmd_lock(),
-        Commands::ExportSeed => cmd_export_seed(),
-        Commands::ExportPrivateKey { chain } => cmd_export_private_key(&chain),
-        Commands::Verify => cmd_verify(),
+        Commands::ExportSeed { password } => cmd_export_seed(&resolve_password(password)?),
+        Commands::ExportPrivateKey { chain, password } => {
+            cmd_export_private_key(&chain, &resolve_password(password)?)
+        }
+        Commands::Verify { password } => cmd_verify(&resolve_password(password)?),
     }
 }

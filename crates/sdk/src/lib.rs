@@ -99,7 +99,8 @@ impl Wallet {
     /// Returns `SdkError::InvalidPassword` if the password-derived key
     /// fails. Returns `SdkError::VaultError` for I/O errors.
     pub fn save(&self, password: &str) -> Result<(), SdkError> {
-        let core = wallet_core::Wallet::from_seed(self.seed.to_vec());
+        let core =
+            wallet_core::Wallet::from_seed(self.seed.to_vec(), self.mnemonic.clone());
         storage::save_wallet(WALLET_PATH, &core, password).map_err(map_storage_err)
     }
 

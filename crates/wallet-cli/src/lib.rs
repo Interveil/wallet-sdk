@@ -1,18 +1,6 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use rand::seq::SliceRandom;
-use std::sync::Mutex;
-use zeroize::Zeroizing;
-
-static SESSION: Mutex<Option<Session>> = Mutex::new(None);
-
-struct Session {
-    wallet: sdk::Wallet,
-    mnemonic: Option<Zeroizing<String>>,
-    eth_raw: Zeroizing<[u8; 32]>,
-    sol_raw: Zeroizing<[u8; 32]>,
-    pvx_raw: Zeroizing<[u8; 32]>,
-}
 
 #[derive(Parser)]
 #[command(name = "wallet", about = "Multichain wallet CLI")]
@@ -52,30 +40,23 @@ pub enum Commands {
         #[arg(long)]
         pvx: bool,
     },
-    /// Decrypt wallet into in-memory session (enables export commands)
-    Unlock,
-    /// Wipe all secrets from in-memory session
-    Lock,
-    /// Export mnemonic phrase (requires unlocked session)
-    ExportSeed,
-    /// Export chain private key (requires unlocked session)
+    /// Export mnemonic phrase (loads from vault with password)
+    ExportSeed {
+        #[arg(long, short)]
+        password: Option<String>,
+    },
+    /// Export chain private key (loads from vault with password)
     ExportPrivateKey {
         #[arg(long)]
         chain: String,
+        #[arg(long, short)]
+        password: Option<String>,
     },
     /// Verify mnemonic backup by typing random words
-    Verify,
-}
-
-fn with_session<F, T>(f: F) -> Result<T>
-where
-    F: FnOnce(&Session) -> Result<T>,
-{
-    let guard = SESSION.lock().unwrap();
-    let session = guard
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("Wallet is locked. Run 'wallet unlock' first."))?;
-    f(session)
+    Verify {
+        #[arg(long, short)]
+        password: Option<String>,
+    },
 }
 
 /// Reads a password from the CLI argument or prompts interactively.
@@ -213,79 +194,19 @@ pub fn cmd_address(eth: bool, sol: bool, pvx: bool) -> Result<()> {
     Ok(())
 }
 
-/// Decrypts the vault and loads the wallet into the in-memory session.
-///
-/// This must be called before `export-seed`, `export-private-key`, or
-/// `verify`.
-///
-/// # Panics
-///
-/// Panics if the global `SESSION` mutex is poisoned (another thread
-/// panicked while holding the lock).
-///
-/// # Errors
-///
-/// Returns an error if the password is wrong, the vault is corrupted,
-/// or key derivation fails.
-pub fn cmd_unlock() -> Result<()> {
-    let password = dialoguer::Password::new()
-        .with_prompt("Password")
-        .interact()
-        .context("failed to read password")?;
-    let wallet = sdk::Wallet::load(&password).context("failed to unlock wallet")?;
-
-    let mnemonic = wallet.mnemonic().map(|m| Zeroizing::new(m.to_string()));
-    let eth_raw = Zeroizing::new(wallet.eth_private_key()?);
-    let sol_raw = Zeroizing::new(wallet.sol_private_key()?);
-    let pvx_raw = Zeroizing::new(wallet.pvx_spending_key()?);
-
-    let mut guard = SESSION.lock().unwrap();
-    *guard = Some(Session {
-        wallet,
-        mnemonic,
-        eth_raw,
-        sol_raw,
-        pvx_raw,
-    });
-
-    println!("Wallet unlocked.");
-    Ok(())
-}
-
-/// Wipes all secrets from the in-memory session.
-///
-/// # Panics
-///
-/// Panics if the global `SESSION` mutex is poisoned.
-///
-/// # Errors
-///
-/// Returns an error if the session mutex cannot be acquired.
-pub fn cmd_lock() -> Result<()> {
-    let mut guard = SESSION.lock().unwrap();
-    *guard = None;
-    println!("Wallet locked.");
-    Ok(())
-}
-
-/// Exports the mnemonic seed phrase (requires an unlocked session).
+/// Exports the mnemonic seed phrase (loads from vault with password).
 ///
 /// Prompts for confirmation before displaying the seed.
 ///
 /// # Errors
 ///
-/// Returns an error if the wallet is locked or user input fails.
-pub fn cmd_export_seed() -> Result<()> {
-    let mnemonic = with_session(|session| {
-        Ok(session
-            .mnemonic
-            .as_ref()
-            .map(|m| m.to_string())
-            .or_else(|| session.wallet.mnemonic().map(ToString::to_string)))
-    })?;
+/// Returns an error if the password is wrong, the vault is corrupted,
+/// or user input fails.
+pub fn cmd_export_seed(password: &str) -> Result<()> {
+    let wallet = sdk::Wallet::load(password).context("failed to load wallet")?;
 
-    let Some(mnemonic) = mnemonic else {
-        println!("No mnemonic available (wallet was loaded from storage).");
+    let Some(mnemonic) = wallet.mnemonic() else {
+        println!("No mnemonic available (wallet was saved without mnemonic).");
         return Ok(());
     };
 
@@ -303,21 +224,16 @@ pub fn cmd_export_seed() -> Result<()> {
     Ok(())
 }
 
-/// Exports a chain-specific private key (requires an unlocked session).
+/// Exports a chain-specific private key (loads from vault with password).
 ///
 /// Use `--chain eth | sol | pvx`. Prompts for confirmation before
 /// displaying the key.
 ///
-/// # Panics
-///
-/// Panics if the global `SESSION` mutex is poisoned, or if the
-/// hardcoded Bech32 HRP `"pvxsk"` is invalid (should never happen).
-///
 /// # Errors
 ///
-/// Returns an error if the chain is unknown, the wallet is locked,
-/// or user input fails.
-pub fn cmd_export_private_key(chain: &str) -> Result<()> {
+/// Returns an error if the chain is unknown, the password is wrong,
+/// the vault is corrupted, or user input fails.
+pub fn cmd_export_private_key(chain: &str, password: &str) -> Result<()> {
     match chain {
         "eth" | "sol" | "pvx" => {}
         _ => anyhow::bail!("unknown chain '{chain}'. Use --chain eth | sol | pvx"),
@@ -333,45 +249,51 @@ pub fn cmd_export_private_key(chain: &str) -> Result<()> {
         return Ok(());
     }
 
-    with_session(|session| {
-        match chain {
-            "eth" => {
-                println!("ETH Private Key: 0x{}", hex::encode(session.eth_raw.as_ref()));
-            }
-            "sol" => {
-                let encoded = bs58::encode(session.sol_raw.as_ref()).into_string();
-                println!("SOL Private Key: {encoded}");
-            }
-            "pvx" => {
-                let hrp = bech32::Hrp::parse("pvxsk").unwrap();
-                let encoded =
-                    bech32::encode_lower::<bech32::Bech32>(hrp, session.pvx_raw.as_ref()).unwrap();
-                println!("PVX Spending Key: {encoded}");
-            }
-            _ => unreachable!(),
+    let wallet = sdk::Wallet::load(password).context("failed to load wallet")?;
+
+    match chain {
+        "eth" => {
+            let key = wallet
+                .eth_private_key()
+                .context("failed to derive ETH private key")?;
+            println!("ETH Private Key: 0x{}", hex::encode(key));
         }
-        Ok(())
-    })?;
+        "sol" => {
+            let key = wallet
+                .sol_private_key()
+                .context("failed to derive SOL private key")?;
+            let encoded = bs58::encode(key).into_string();
+            println!("SOL Private Key: {encoded}");
+        }
+        "pvx" => {
+            let key = wallet
+                .pvx_spending_key()
+                .context("failed to derive PVX spending key")?;
+            let hrp = bech32::Hrp::parse("pvxsk").unwrap();
+            let encoded =
+                bech32::encode_lower::<bech32::Bech32>(hrp, key.as_ref()).unwrap();
+            println!("PVX Spending Key: {encoded}");
+        }
+        _ => unreachable!(),
+    }
 
     Ok(())
 }
 
 /// Verifies mnemonic backup by prompting for 3 random words.
 ///
-/// Requires an unlocked session (run `wallet unlock` first).
+/// Loads the wallet from the vault with the given password.
 ///
 /// # Errors
 ///
-/// Returns an error if the wallet is locked or user input fails.
-pub fn cmd_verify() -> Result<()> {
-    let mnemonic_str = with_session(|session| {
-        session
-            .mnemonic
-            .as_ref()
-            .map(|m| m.to_string())
-            .or_else(|| session.wallet.mnemonic().map(ToString::to_string))
-            .ok_or_else(|| anyhow::anyhow!("No mnemonic available for verification"))
-    })?;
+/// Returns an error if the password is wrong, the vault is corrupted,
+/// or user input fails.
+pub fn cmd_verify(password: &str) -> Result<()> {
+    let wallet = sdk::Wallet::load(password).context("failed to load wallet")?;
+
+    let Some(mnemonic_str) = wallet.mnemonic() else {
+        anyhow::bail!("No mnemonic available for verification (wallet was saved without mnemonic)");
+    };
 
     let words: Vec<&str> = mnemonic_str.split_whitespace().collect();
 
@@ -400,31 +322,10 @@ pub fn cmd_verify() -> Result<()> {
     Ok(())
 }
 
-/// Test helper: verify mnemonic against a list of words (all positions).
-#[cfg(test)]
-pub(crate) fn verify_with_words(
-    mnemonic: &Option<Zeroizing<String>>,
-    answers: &[&str],
-) -> bool {
-    let phrase = match mnemonic {
-        Some(m) => m.to_string(),
-        None => return false,
-    };
-    let words: Vec<&str> = phrase.split_whitespace().collect();
-    if answers.len() != words.len() {
-        return false;
-    }
-    words.iter().zip(answers.iter()).all(|(a, b)| a == b)
-}
-
 #[cfg(test)]
 pub(crate) mod tests {
-    use super::{
-        verify_with_words, with_session, Session, SESSION,
-    };
     use sdk::SdkError;
     use std::sync::Mutex;
-    use zeroize::Zeroizing;
 
     static SERIAL: Mutex<()> = Mutex::new(());
 
@@ -440,21 +341,6 @@ pub(crate) mod tests {
         f();
         std::env::set_current_dir(&original).unwrap();
         std::fs::remove_dir_all(&dir).ok();
-    }
-
-    fn unlocked_session() -> Session {
-        let wallet = sdk::Wallet::create().unwrap();
-        let mnemonic = wallet.mnemonic().map(|m| Zeroizing::new(m.to_string()));
-        let eth_raw = Zeroizing::new(wallet.eth_private_key().unwrap());
-        let sol_raw = Zeroizing::new(wallet.sol_private_key().unwrap());
-        let pvx_raw = Zeroizing::new(wallet.pvx_spending_key().unwrap());
-        Session {
-            wallet,
-            mnemonic,
-            eth_raw,
-            sol_raw,
-            pvx_raw,
-        }
     }
 
     #[test]
@@ -499,6 +385,23 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn test_save_load_preserves_mnemonic() {
+        with_isolated_dir("cli_save_load_mnemonic", || {
+            let wallet = sdk::Wallet::create().unwrap();
+            let orig_mnemonic = wallet.mnemonic().unwrap().to_string();
+
+            wallet.save("pw").unwrap();
+
+            let loaded = sdk::Wallet::load("pw").unwrap();
+            assert_eq!(
+                loaded.mnemonic(),
+                Some(orig_mnemonic.as_str()),
+                "mnemonic must survive save/load roundtrip"
+            );
+        });
+    }
+
+    #[test]
     fn test_address_filtering() {
         with_isolated_dir("cli_address_filter", || {
             let wallet = sdk::Wallet::create().unwrap();
@@ -512,61 +415,8 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn test_unlock_roundtrip() {
-        with_isolated_dir("cli_unlock", || {
-            let wallet = sdk::Wallet::create().unwrap();
-            wallet.save("pw").unwrap();
-
-            let loaded = sdk::Wallet::load("pw").unwrap();
-            let mnemonic = loaded.mnemonic().map(|m| Zeroizing::new(m.to_string()));
-            let eth_raw = Zeroizing::new(loaded.eth_private_key().unwrap());
-            let sol_raw = Zeroizing::new(loaded.sol_private_key().unwrap());
-            let pvx_raw = Zeroizing::new(loaded.pvx_spending_key().unwrap());
-            {
-                let mut guard = SESSION.lock().unwrap();
-                *guard = Some(Session {
-                    wallet: loaded,
-                    mnemonic,
-                    eth_raw,
-                    sol_raw,
-                    pvx_raw,
-                });
-            }
-
-            // Use session directly (not with_session, to avoid double-lock)
-            let eth_key = {
-                let guard = SESSION.lock().unwrap();
-                let session = guard.as_ref().unwrap();
-                *session.eth_raw
-            };
-            assert_eq!(eth_key.len(), 32);
-
-            // Lock
-            {
-                let mut guard = SESSION.lock().unwrap();
-                *guard = None;
-            }
-
-            // After lock, session is gone
-            let is_none = {
-                let guard = SESSION.lock().unwrap();
-                guard.is_none()
-            };
-            assert!(is_none);
-        });
-    }
-
-    #[test]
-    fn test_export_without_unlock_fails() {
-        let result = with_session(|_| Ok(()));
-        assert!(result.is_err());
-        let err = result.unwrap_err().to_string();
-        assert!(err.contains("locked"), "error must mention 'locked': {err}");
-    }
-
-    #[test]
     fn test_export_invalid_chain() {
-        let result = crate::cmd_export_private_key("btc");
+        let result = crate::cmd_export_private_key("btc", "");
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(
@@ -603,66 +453,5 @@ pub(crate) mod tests {
         assert_ne!(eth_key, sol_key);
         assert_ne!(eth_key, pvx_key);
         assert_ne!(sol_key, pvx_key);
-    }
-
-    #[test]
-    fn test_verify_with_wrong_word_fails() {
-        let session = unlocked_session();
-        let words: Vec<&str> = session
-            .mnemonic
-            .as_ref()
-            .unwrap()
-            .split_whitespace()
-            .collect();
-        let wrong_words: Vec<&str> = words.iter().map(|_| "wrong").collect();
-
-        let result = verify_with_words(&session.mnemonic, &wrong_words);
-        assert!(!result, "wrong words must fail verification");
-    }
-
-    #[test]
-    fn test_verify_with_correct_words_passes() {
-        let session = unlocked_session();
-        let words: Vec<&str> = session
-            .mnemonic
-            .as_ref()
-            .unwrap()
-            .split_whitespace()
-            .collect();
-
-        let result = verify_with_words(&session.mnemonic, &words);
-        assert!(result, "correct words must pass verification");
-    }
-
-    #[test]
-    fn test_export_seed_without_mnemonic() {
-        let wallet = sdk::Wallet::import(
-            "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
-        )
-        .unwrap();
-        let eth_raw = Zeroizing::new(wallet.eth_private_key().unwrap());
-        let sol_raw = Zeroizing::new(wallet.sol_private_key().unwrap());
-        let pvx_raw = Zeroizing::new(wallet.pvx_spending_key().unwrap());
-        let mut guard = SESSION.lock().unwrap();
-        *guard = Some(Session {
-            wallet,
-            mnemonic: None,
-            eth_raw,
-            sol_raw,
-            pvx_raw,
-        });
-        drop(guard);
-
-        let mnemonic = with_session(|s| {
-            Ok(s.mnemonic
-                .as_ref()
-                .map(|m| m.to_string())
-                .or_else(|| s.wallet.mnemonic().map(ToString::to_string)))
-        });
-        assert!(mnemonic.is_ok());
-        assert!(
-            mnemonic.unwrap().is_some(),
-            "wallet has mnemonic via wallet.mnemonic()"
-        );
     }
 }

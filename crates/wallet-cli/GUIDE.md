@@ -18,9 +18,8 @@ wallet <COMMAND>
 
 ### Global behaviour
 
-- Sensitive commands (`export-seed`, `export-private-key`, `verify`) require an **unlocked session** — run `wallet unlock` first.
-- Passwords can be provided via `--password` / `-p` or entered interactively.
-- The vault file is stored in the current working directory as an encrypted JSON file.
+- Sensitive commands (`export-seed`, `export-private-key`, `verify`) load the vault directly — provide the vault password via `--password` / `-p` or enter it interactively.
+- The vault file (`wallet.dat`) is stored in the current working directory.
 
 ---
 
@@ -60,7 +59,7 @@ wallet save
 wallet save -p "my-secure-password"
 ```
 
-The vault is encrypted with the provided password. A vault file (e.g. `wallet.json`) is created in the current directory.
+The vault is encrypted with the provided password.
 
 ---
 
@@ -90,47 +89,26 @@ This command always prompts for the vault password interactively (the `--passwor
 
 ---
 
-### `unlock`
+### `export-seed [-p <password>]`
 
-Decrypt the vault and load the wallet into an **in-memory session**. This is a prerequisite for `export-seed`, `export-private-key`, and `verify`.
-
-```
-wallet unlock
-```
-
-Prompts for the vault password. The session holds the mnemonic and all private keys in memory (zeroed on drop).
-
----
-
-### `lock`
-
-Wipe all secrets from the in-memory session. After this, `export-seed`, `export-private-key`, and `verify` will refuse until `unlock` is run again.
-
-```
-wallet lock
-```
-
----
-
-### `export-seed`
-
-Print the mnemonic seed phrase. Requires an **unlocked session** (`wallet unlock` first). Prompts for confirmation before displaying the seed.
+Print the mnemonic seed phrase. Loads the vault directly — no prior `unlock` needed. Prompts for confirmation before displaying the seed.
 
 ```
 wallet export-seed
+wallet export-seed -p "my-password"
 ```
 
 > **Warning:** Your mnemonic gives full control over all wallets. Only use this in a secure environment.
 
 ---
 
-### `export-private-key --chain <CHAIN>`
+### `export-private-key --chain <CHAIN> [-p <password>]`
 
-Print a chain-specific private key. Requires an **unlocked session**. Prompts for confirmation.
+Print a chain-specific private key. Loads the vault directly — no prior `unlock` needed. Prompts for confirmation before displaying the key.
 
 ```
 wallet export-private-key --chain eth
-wallet export-private-key --chain sol
+wallet export-private-key --chain sol -p "my-password"
 wallet export-private-key --chain pvx
 ```
 
@@ -144,12 +122,13 @@ Key formats by chain:
 
 ---
 
-### `verify`
+### `verify [-p <password>]`
 
-Verify that you have backed up your mnemonic correctly. Requires an **unlocked session**. You will be prompted for **3 random words** from your 24-word phrase.
+Verify that you have backed up your mnemonic correctly. Loads the vault directly — no prior `unlock` needed. You will be prompted for **3 random words** from your 24-word phrase.
 
 ```
 wallet verify
+wallet verify -p "my-password"
 ```
 
 Output:
@@ -158,45 +137,13 @@ Output:
 
 ---
 
-## Session Lifecycle
-
-```
-                    ┌──────────┐
-                    │  create   │── (no persistence)
-                    │  import   │── (no persistence)
-                    │  save     │── creates vault + prints mnemonic
-                    │  load     │── reads vault, prints addresses
-                    └─────┬─────┘
-                          │
-                    ┌─────▼──────┐
-                    │   unlock   │── decrypts vault into memory
-                    └─────┬──────┘
-                          │
-         ┌────────────────┼────────────────┐
-         ▼                ▼                ▼
-   ┌──────────┐   ┌──────────────┐   ┌────────┐
-   │export-seed│   │export-pvt-key│   │ verify │
-   └──────────┘   └──────────────┘   └────────┘
-         │                │                │
-         └────────────────┼────────────────┘
-                          ▼
-                    ┌──────────┐
-                    │   lock   │── wipe session
-                    └──────────┘
-```
-
-- `unlock` must be called once before any of `export-seed`, `export-private-key`, or `verify`.
-- `lock` ends the session and clears secrets from memory.
-- The session does **not** persist across process restarts.
-
 ## Vault file
 
-The encrypted vault is stored as `wallet.json` in the current working directory. It uses the same format as `wallet-sdk`. Keep this file and its password secure.
+The encrypted vault is stored as `wallet.dat` in the current working directory. It uses AES-256-GCM with Argon2id key derivation. The mnemonic phrase is preserved inside the vault so that `export-seed` and `verify` can work without a separate session.
 
 ## Security Notes
 
-- The mnemonic phrase is **only shown once** (at `create` or `save`). There is no way to retrieve it without the vault password.
-- `export-seed` and `export-private-key` require explicit confirmation before displaying secrets.
-- `lock` sets the in-memory session to `None`; the previous secrets are dropped and zeroed.
-- Private keys and mnemonics use `Zeroizing` wrappers so that sensitive memory is zeroed on drop.
+- The mnemonic phrase is **only shown once** (at `create` or `save`). After that it can only be retrieved via `export-seed` with the vault password.
+- `export-seed`, `export-private-key`, and `verify` require explicit confirmation before displaying secrets.
+- Each sensitive command loads the wallet from the vault, performs the operation, and then drops all secrets — no long-lived in-memory session.
 - Interactive password prompts do **not** echo input to the terminal.

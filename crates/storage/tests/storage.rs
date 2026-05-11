@@ -24,7 +24,7 @@ fn test_save_load_roundtrip() {
     let loaded = load_wallet(&path, password).unwrap();
 
     assert_eq!(wallet.seed(), loaded.seed());
-    assert!(loaded.mnemonic().is_empty());
+    assert_eq!(loaded.mnemonic(), wallet.mnemonic());
 
     let _ = fs::remove_file(&path);
 }
@@ -69,7 +69,7 @@ fn test_format_structure() {
 
     let data = fs::read(&path).unwrap();
 
-    assert_eq!(data[0], 0x01, "version byte must be 0x01");
+    assert_eq!(data[0], 0x02, "version byte must be 0x02");
     assert!(
         data.len() > HEADER_LEN,
         "file must contain ciphertext after header"
