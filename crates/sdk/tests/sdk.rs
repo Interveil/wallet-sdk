@@ -1,5 +1,5 @@
 use std::sync::Mutex;
-use sdk::{SdkError, Wallet};
+use sdk::{Chain, SdkError, Session, Wallet};
 
 static SERIAL: Mutex<()> = Mutex::new(());
 
@@ -94,4 +94,161 @@ fn test_wrong_password_fails_load() {
         let result = Wallet::load("wrong-password");
         assert!(matches!(result, Err(SdkError::InvalidPassword)));
     });
+}
+
+// ---------------------------------------------------------------------------
+// Session / signing tests
+// ---------------------------------------------------------------------------
+
+const TEST_MNEMONIC: &str =
+    "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+
+fn test_session() -> Session {
+    let wallet = Wallet::import(TEST_MNEMONIC).unwrap();
+    Session::from_wallet(wallet).unwrap()
+}
+
+// --- Solana ---
+
+#[test]
+fn test_sign_sol_deterministic() {
+    let session = test_session();
+    let msg = b"hello solana";
+
+    let sig_a = session.sign(msg, Chain::Sol).unwrap();
+    let sig_b = session.sign(msg, Chain::Sol).unwrap();
+
+    assert_eq!(sig_a.len(), 64, "Ed25519 signature must be 64 bytes");
+    assert_eq!(sig_a, sig_b, "signatures must be deterministic");
+}
+
+#[test]
+fn test_sign_sol_different_messages() {
+    let session = test_session();
+    let sig_a = session.sign(b"message one", Chain::Sol).unwrap();
+    let sig_b = session.sign(b"message two", Chain::Sol).unwrap();
+
+    assert_ne!(sig_a, sig_b, "different messages must produce different signatures");
+}
+
+#[test]
+fn test_sign_sol_verify() {
+    use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+    use sha2::{Digest, Sha256};
+
+    let session = test_session();
+    let msg = b"verify me";
+
+    let hash = Sha256::digest(msg);
+    let sig_bytes = session.sign(msg, Chain::Sol).unwrap();
+    let signature = Signature::from_slice(&sig_bytes).unwrap();
+
+    let wallet = Wallet::import(TEST_MNEMONIC).unwrap();
+    let pubkey_bytes = {
+        let sk = ed25519_dalek::SigningKey::from_bytes(&wallet.sol_private_key().unwrap());
+        sk.verifying_key().to_bytes()
+    };
+    let verifying_key = VerifyingKey::from_bytes(&pubkey_bytes).unwrap();
+
+    assert!(
+        verifying_key.verify(&hash, &signature).is_ok(),
+        "signature must verify against the public key"
+    );
+}
+
+// --- Ethereum ---
+
+#[test]
+fn test_sign_eth_deterministic() {
+    let session = test_session();
+    let msg = b"hello ethereum";
+
+    let sig_a = session.sign(msg, Chain::Eth).unwrap();
+    let sig_b = session.sign(msg, Chain::Eth).unwrap();
+
+    assert_eq!(sig_a.len(), 64, "ECDSA signature must be 64 bytes");
+    assert_eq!(sig_a, sig_b, "signatures must be deterministic (RFC 6979)");
+}
+
+#[test]
+fn test_sign_eth_different_messages() {
+    let session = test_session();
+    let sig_a = session.sign(b"message one", Chain::Eth).unwrap();
+    let sig_b = session.sign(b"message two", Chain::Eth).unwrap();
+
+    assert_ne!(sig_a, sig_b, "different messages must produce different signatures");
+}
+
+#[test]
+fn test_sign_eth_verify() {
+    use k256::ecdsa::signature::hazmat::PrehashVerifier;
+    use k256::ecdsa::{Signature, SigningKey, VerifyingKey};
+    use sha2::{Digest, Sha256};
+
+    let session = test_session();
+    let msg = b"verify me eth";
+
+    let hash = Sha256::digest(msg);
+    let sig_bytes = session.sign(msg, Chain::Eth).unwrap();
+    let signature = Signature::from_slice(&sig_bytes).unwrap();
+
+    let eth_key = Wallet::import(TEST_MNEMONIC).unwrap().eth_private_key().unwrap();
+    let signing_key = SigningKey::from_slice(&eth_key).unwrap();
+    let verifying_key = VerifyingKey::from(&signing_key);
+
+    assert!(
+        verifying_key.verify_prehash(&hash, &signature).is_ok(),
+        "ECDSA signature must verify against the public key"
+    );
+}
+
+// --- Nonce ---
+
+#[test]
+fn test_sign_with_nonce_differs() {
+    let session = test_session();
+    let msg = b"hello";
+
+    let sig_no_nonce = session.sign_with_nonce(msg, Chain::Sol, &[]).unwrap();
+    let sig_standard = session.sign(msg, Chain::Sol).unwrap();
+    let sig_nonce_a = session.sign_with_nonce(msg, Chain::Sol, b"nonce-1").unwrap();
+    let sig_nonce_b = session.sign_with_nonce(msg, Chain::Sol, b"nonce-2").unwrap();
+    let sig_nonce_eth = session.sign_with_nonce(msg, Chain::Eth, b"nonce-1").unwrap();
+
+    assert_eq!(
+        sig_no_nonce, sig_standard,
+        "empty nonce must produce same result as sign()"
+    );
+    assert_ne!(
+        sig_no_nonce, sig_nonce_a,
+        "nonce must change the Solana signature"
+    );
+    assert_ne!(
+        sig_nonce_a, sig_nonce_b,
+        "different nonces must produce different Solana signatures"
+    );
+    assert_eq!(sig_nonce_eth.len(), 64, "ECDSA nonced signature must be 64 bytes");
+}
+
+// --- General ---
+
+#[test]
+fn test_sign_empty_message_fails() {
+    let session = test_session();
+    let result = session.sign(b"", Chain::Sol);
+    assert!(matches!(result, Err(SdkError::InvalidMessage)));
+
+    let result = session.sign_with_nonce(b"", Chain::Eth, b"nonce");
+    assert!(matches!(result, Err(SdkError::InvalidMessage)));
+
+    let result = session.sign(b"", Chain::Eth);
+    assert!(matches!(result, Err(SdkError::InvalidMessage)));
+}
+
+#[test]
+fn test_session_lock_consumes() {
+    let session = test_session();
+    assert!(session.sign(b"test", Chain::Sol).is_ok());
+    assert!(session.sign(b"test", Chain::Eth).is_ok());
+    session.lock().unwrap();
 }

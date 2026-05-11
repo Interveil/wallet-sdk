@@ -1,4 +1,4 @@
-use sol::derive_sol_address;
+use sol::{derive_sol_address, sign_sol};
 use wallet_core::Wallet;
 
 /// BIP-39 standard test vector mnemonic (all-zeros entropy).
@@ -64,5 +64,47 @@ fn test_address_length() {
         address.len() >= 32 && address.len() <= 44,
         "Solana address length {} out of expected range 32-44",
         address.len()
+    );
+}
+
+#[test]
+fn test_sign_sol_roundtrip() {
+    let wallet = Wallet::import(GOLDEN_MNEMONIC).unwrap();
+    let key = sol::derive_sol_private_key(wallet.seed()).unwrap();
+    let hash = [0xabu8; 32];
+
+    let sig = sign_sol(&key, &hash).unwrap();
+    assert_eq!(sig.len(), 64, "Ed25519 signature must be 64 bytes");
+}
+
+#[test]
+fn test_sign_sol_deterministic() {
+    let wallet = Wallet::create().unwrap();
+    let key = sol::derive_sol_private_key(wallet.seed()).unwrap();
+    let hash = [0xabu8; 32];
+
+    let sig_a = sign_sol(&key, &hash).unwrap();
+    let sig_b = sign_sol(&key, &hash).unwrap();
+
+    assert_eq!(sig_a, sig_b, "sign_sol must be deterministic");
+}
+
+#[test]
+fn test_sign_sol_verify() {
+    use ed25519_dalek::{Signature, Verifier};
+
+    let wallet = Wallet::create().unwrap();
+    let key = sol::derive_sol_private_key(wallet.seed()).unwrap();
+    let hash = [0xabu8; 32];
+
+    let sig_bytes = sign_sol(&key, &hash).unwrap();
+    let signature = Signature::from_slice(&sig_bytes).unwrap();
+
+    let signing_key = ed25519_dalek::SigningKey::from_bytes(&key);
+    let verifying_key = signing_key.verifying_key();
+
+    assert!(
+        verifying_key.verify(&hash, &signature).is_ok(),
+        "signature must verify"
     );
 }
