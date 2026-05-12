@@ -1180,11 +1180,8 @@ name = "veil-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bech32",
- "bs58",
  "clap",
  "dialoguer",
- "hex",
  "rand",
  "veil-wallet-sdk",
 ]

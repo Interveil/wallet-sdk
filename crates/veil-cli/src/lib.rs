@@ -254,25 +254,21 @@ pub fn cmd_export_private_key(chain: &str, password: &str) -> Result<()> {
     match chain {
         "eth" => {
             let key = wallet
-                .eth_private_key()
+                .export_eth_private_key()
                 .context("failed to derive ETH private key")?;
-            println!("ETH Private Key: 0x{}", hex::encode(key));
+            println!("ETH Private Key: {}", *key);
         }
         "sol" => {
             let key = wallet
-                .sol_private_key()
+                .export_sol_private_key()
                 .context("failed to derive SOL private key")?;
-            let encoded = bs58::encode(key).into_string();
-            println!("SOL Private Key: {encoded}");
+            println!("SOL Private Key: {}", *key);
         }
         "pvx" => {
             let key = wallet
-                .pvx_spending_key()
+                .export_pvx_spending_key()
                 .context("failed to derive PVX spending key")?;
-            let hrp = bech32::Hrp::parse("pvxsk").unwrap();
-            let encoded =
-                bech32::encode_lower::<bech32::Bech32>(hrp, key.as_ref()).unwrap();
-            println!("PVX Spending Key: {encoded}");
+            println!("PVX Spending Key: {}", *key);
         }
         _ => unreachable!(),
     }
