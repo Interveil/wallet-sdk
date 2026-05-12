@@ -65,9 +65,11 @@ pub fn save_wallet(
 ) -> Result<(), StorageError> {
 
     // Encode: [seed_len:u32 LE][seed bytes][mnemonic_len:u32 LE][mnemonic bytes]
-    let seed_len = u32::try_from(seed.len()).unwrap_or(u32::MAX);
+    let seed_len = u32::try_from(seed.len())
+        .map_err(|_| StorageError::CorruptedFile)?;
     let mnemonic_str = mnemonic.unwrap_or("");
-    let mnemonic_len = u32::try_from(mnemonic_str.len()).unwrap_or(u32::MAX);
+    let mnemonic_len = u32::try_from(mnemonic_str.len())
+        .map_err(|_| StorageError::CorruptedFile)?;
     let mnemonic_bytes = mnemonic_str.as_bytes();
 
     let mut plaintext = Vec::with_capacity(4 + seed.len() + 4 + mnemonic_bytes.len());
@@ -154,6 +156,9 @@ pub fn load_wallet(
     let seed_len = u32::from_le_bytes(
         plaintext[..4].try_into().map_err(|_| StorageError::CorruptedFile)?,
     ) as usize;
+    if 4 + seed_len + 4 > plaintext.len() {
+        return Err(StorageError::CorruptedFile);
+    }
     let mnemonic_len = u32::from_le_bytes(
         plaintext[4 + seed_len..4 + seed_len + 4]
             .try_into()
