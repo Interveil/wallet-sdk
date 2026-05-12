@@ -25,7 +25,7 @@ jobs:
       - name: Login to crates.io
         run: cargo login ${{ secrets.CARGO_TOKEN }}
 
-      # DAG: veil-storage → veil-eth/veil-sol/veil-pvx → veil-wallet-sdk
+      # DAG: veil-storage → veil-eth/veil-sol/veil-pvx → veil-wallet-sdk → veil-cli
       # veil-eth/veil-sol/veil-pvx are independent — can run in parallel
 
       - name: Publish veil-storage
@@ -44,3 +44,8 @@ jobs:
         run: |
           sleep 30
           cargo publish -p veil-wallet-sdk
+
+      - name: Publish veil-cli
+        run: |
+          sleep 30
+          cargo publish -p veil-cli
