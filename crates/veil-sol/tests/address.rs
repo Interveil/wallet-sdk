@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use bip39::{Language, Mnemonic};
-use sol::{derive_sol_address, sign_sol};
+use veil_sol::{derive_sol_address, sign_sol};
 
 /// BIP-39 standard test vector mnemonic (all-zeros entropy).
 const GOLDEN_MNEMONIC: &str =
@@ -65,7 +65,7 @@ fn test_address_length() {
 #[test]
 fn test_sign_sol_roundtrip() {
     let seed = seed_from_mnemonic(GOLDEN_MNEMONIC);
-    let key = sol::derive_sol_private_key(&seed).unwrap();
+    let key = veil_sol::derive_sol_private_key(&seed).unwrap();
     let hash = [0xabu8; 32];
     let sig = sign_sol(&key, &hash).unwrap();
     assert_eq!(sig.len(), 64, "Ed25519 signature must be 64 bytes");
@@ -74,7 +74,7 @@ fn test_sign_sol_roundtrip() {
 #[test]
 fn test_sign_sol_deterministic() {
     let seed = seed_from_mnemonic(GOLDEN_MNEMONIC);
-    let key = sol::derive_sol_private_key(&seed).unwrap();
+    let key = veil_sol::derive_sol_private_key(&seed).unwrap();
     let hash = [0xabu8; 32];
     let sig_a = sign_sol(&key, &hash).unwrap();
     let sig_b = sign_sol(&key, &hash).unwrap();
@@ -85,7 +85,7 @@ fn test_sign_sol_deterministic() {
 fn test_sign_sol_verify() {
     use ed25519_dalek::{Signature, Verifier};
     let seed = seed_from_mnemonic(GOLDEN_MNEMONIC);
-    let key = sol::derive_sol_private_key(&seed).unwrap();
+    let key = veil_sol::derive_sol_private_key(&seed).unwrap();
     let hash = [0xabu8; 32];
     let sig_bytes = sign_sol(&key, &hash).unwrap();
     let signature = Signature::from_slice(&sig_bytes).unwrap();

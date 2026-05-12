@@ -39,10 +39,10 @@ pub struct Wallet {
 
 impl Wallet {
     fn derive_addresses(seed: &[u8]) -> Result<(String, String, String), WalletError> {
-        let eth = eth::derive_eth_address(seed).map_err(|_| WalletError::DerivationFailed)?;
-        let sol = sol::derive_sol_address(seed).map_err(|_| WalletError::DerivationFailed)?;
+        let eth = veil_eth::derive_eth_address(seed).map_err(|_| WalletError::DerivationFailed)?;
+        let sol = veil_sol::derive_sol_address(seed).map_err(|_| WalletError::DerivationFailed)?;
         let pvx =
-            veil::derive_private_address(seed).map_err(|_| WalletError::DerivationFailed)?;
+            veil_pvx::derive_private_address(seed).map_err(|_| WalletError::DerivationFailed)?;
         Ok((eth, sol, pvx))
     }
 
@@ -170,7 +170,7 @@ impl Wallet {
         } else {
             Some(self.mnemonic.as_str())
         };
-        storage::save_wallet(path, &self.seed, mnemonic, password)
+        veil_storage::save_wallet(path, &self.seed, mnemonic, password)
             .map_err(map_storage_err)
     }
 
@@ -194,7 +194,7 @@ impl Wallet {
     /// Returns `WalletError::VaultError` for I/O errors.
     pub fn load_from(path: impl AsRef<Path>, password: &str) -> Result<Self, WalletError> {
         let (seed, mnemonic) =
-            storage::load_wallet(path, password).map_err(map_storage_err)?;
+            veil_storage::load_wallet(path, password).map_err(map_storage_err)?;
         Self::from_seed(seed, mnemonic)
     }
 
@@ -289,7 +289,7 @@ impl Wallet {
     ///
     /// Returns `WalletError::DerivationFailed` if BIP-32 derivation fails.
     pub fn eth_private_key(&self) -> Result<[u8; 32], WalletError> {
-        eth::derive_eth_private_key(&self.seed).map_err(|_| WalletError::DerivationFailed)
+        veil_eth::derive_eth_private_key(&self.seed).map_err(|_| WalletError::DerivationFailed)
     }
 
     /// Derives the Ed25519 private key for Solana (SLIP-0010 path
@@ -299,7 +299,7 @@ impl Wallet {
     ///
     /// Returns `WalletError::DerivationFailed` if SLIP-0010 derivation fails.
     pub fn sol_private_key(&self) -> Result<[u8; 32], WalletError> {
-        sol::derive_sol_private_key(&self.seed).map_err(|_| WalletError::DerivationFailed)
+        veil_sol::derive_sol_private_key(&self.seed).map_err(|_| WalletError::DerivationFailed)
     }
 
     /// Derives the Ed25519 spending key for Veil at index 0.
@@ -308,16 +308,16 @@ impl Wallet {
     ///
     /// Returns `WalletError::DerivationFailed` if key derivation fails.
     pub fn pvx_spending_key(&self) -> Result<[u8; 32], WalletError> {
-        veil::derive_spending_key(&self.seed).map_err(|_| WalletError::DerivationFailed)
+        veil_pvx::derive_spending_key(&self.seed).map_err(|_| WalletError::DerivationFailed)
     }
 }
 
-fn map_storage_err(e: storage::StorageError) -> WalletError {
+fn map_storage_err(e: veil_storage::StorageError) -> WalletError {
     match e {
-        storage::StorageError::InvalidPassword | storage::StorageError::DecryptionFailed => {
+        veil_storage::StorageError::InvalidPassword | veil_storage::StorageError::DecryptionFailed => {
             WalletError::InvalidPassword
         }
-        storage::StorageError::CorruptedFile => WalletError::WalletCorrupted,
-        storage::StorageError::IoError(io) => WalletError::VaultError(io.to_string()),
+        veil_storage::StorageError::CorruptedFile => WalletError::WalletCorrupted,
+        veil_storage::StorageError::IoError(io) => WalletError::VaultError(io.to_string()),
     }
 }

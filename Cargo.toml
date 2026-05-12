@@ -1,17 +1,18 @@
 [workspace]
-members = ["crates/eth", "crates/sol", "crates/veil", "crates/storage", "crates/sdk", "crates/wallet-cli"]
+members = [
+  "crates/veil-eth",
+  "crates/veil-sol",
+  "crates/veil-pvx",
+  "crates/veil-storage",
+  "crates/veil-wallet-sdk",
+  "crates/veil-cli",
+]
 resolver = "2"
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.85"
 license = "BSD-3-Clause"
 repository = "https://github.com/Interveil/wallet-sdk"
-authors =  ["Lika"]
-
-[patch.crates-io]
-sdk = { path = "crates/sdk" }
-eth = { path = "crates/eth" }
-sol = { path = "crates/sol" }
-veil = { path = "crates/veil" }
-storage = { path = "crates/storage" }
+authors = ["Lika"]

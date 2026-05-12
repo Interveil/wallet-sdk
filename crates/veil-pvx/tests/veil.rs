@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use bip39::{Language, Mnemonic};
-use veil::{derive_nullifier_key, derive_private_address, derive_spending_key, derive_viewing_key};
+use veil_pvx::{derive_nullifier_key, derive_private_address, derive_spending_key, derive_viewing_key};
 
 fn seed_from_mnemonic(phrase: &str) -> Vec<u8> {
     Mnemonic::from_str(phrase).unwrap().to_seed("").to_vec()

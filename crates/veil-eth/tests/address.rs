@@ -1,6 +1,6 @@
 use std::str::FromStr;
-use bip39::{Language, Mnemonic};
-use eth::derive_eth_address;
+use bip39::Mnemonic;
+use veil_eth::derive_eth_address;
 
 fn seed_from_mnemonic(phrase: &str) -> Vec<u8> {
     Mnemonic::from_str(phrase).unwrap().to_seed("").to_vec()

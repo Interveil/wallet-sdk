@@ -1,4 +1,4 @@
-use sdk::{Wallet, WalletError};
+use veil_wallet_sdk::{Wallet, WalletError};
 
 #[test]
 fn test_create_wallet() {

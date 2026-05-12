@@ -86,12 +86,12 @@ impl Session {
     fn sign_hash(&self, hash: &[u8; 32], chain: Chain) -> Result<Vec<u8>, WalletError> {
         match chain {
             Chain::Sol => {
-                let sig = sol::sign_sol(&self.sol_key, hash)
+                let sig = veil_sol::sign_sol(&self.sol_key, hash)
                     .map_err(|e| WalletError::SigningFailed(e.to_string()))?;
                 Ok(sig.to_vec())
             }
             Chain::Eth => {
-                let sig = eth::sign_eth(&self.eth_key, hash)
+                let sig = veil_eth::sign_eth(&self.eth_key, hash)
                     .map_err(|e| WalletError::SigningFailed(e.to_string()))?;
                 Ok(sig.to_vec())
             }

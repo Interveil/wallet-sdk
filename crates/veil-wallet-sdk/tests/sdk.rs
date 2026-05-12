@@ -1,5 +1,5 @@
 use std::sync::Mutex;
-use sdk::{Chain, Session, Wallet, WalletError};
+use veil_wallet_sdk::{Chain, Session, Wallet, WalletError};
 
 static SERIAL: Mutex<()> = Mutex::new(());
 
@@ -152,7 +152,7 @@ fn test_export_seed_matches() {
 #[test]
 fn test_export_seed_from_loaded_vault() {
     with_isolated_dir("export_seed_vault", || {
-        let wallet = Wallet::import_save(GOLDEN_MNEMONIC, "pw").unwrap();
+        let _wallet = Wallet::import_save(GOLDEN_MNEMONIC, "pw").unwrap();
         let loaded = Wallet::load("pw").unwrap();
         let exported = loaded.export_seed().unwrap();
         assert_eq!(*exported, GOLDEN_MNEMONIC, "mnemonic preserved through save/load");

@@ -1,5 +1,5 @@
 [package]
-name = "eth"
+name = "veil-eth"
 version.workspace = true
 edition.workspace = true
 description = "Ethereum address derivation module"

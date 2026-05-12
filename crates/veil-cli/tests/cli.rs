@@ -1,5 +1,5 @@
 use std::sync::Mutex;
-use sdk::{Wallet, WalletError};
+use veil_wallet_sdk::{Wallet, WalletError};
 
 static SERIAL: Mutex<()> = Mutex::new(());
 
