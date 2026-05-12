@@ -1,5 +1,5 @@
 [package]
-name = "wallet-cli"
+name = "veil-cli"
 version.workspace = true
 edition.workspace = true
 description = "CLI tool for multichain wallet SDK"
@@ -10,12 +10,12 @@ keywords = ["wallet", "cli", "cryptocurrency"]
 categories = ["command-line-interface"]
 
 [[bin]]
-name = "wallet"
+name = "veil"
 path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
-sdk = "0.1.0"
+veil-wallet-sdk = { path = "../veil-wallet-sdk", version = "0.1.0" }
 anyhow = "1"
 dialoguer = "0.11"
 hex = "0.4"

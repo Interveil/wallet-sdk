@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use wallet_cli::{
+use veil_cli::{
     cmd_address, cmd_create, cmd_export_private_key, cmd_export_seed, cmd_import, cmd_load,
     cmd_save, cmd_verify, resolve_password, Cli, Commands,
 };

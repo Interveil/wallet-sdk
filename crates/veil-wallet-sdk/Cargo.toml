@@ -1,5 +1,5 @@
 [package]
-name = "sdk"
+name = "veil-wallet-sdk"
 version.workspace = true
 edition.workspace = true
 description = "Multichain wallet SDK with ETH, SOL, and PVX support"
@@ -11,10 +11,10 @@ categories = ["cryptography::cryptocurrencies"]
 
 [dependencies]
 bip39 = { version = "2.2", features = ["rand"] }
-eth = "0.1.0"
-sol = "0.1.0"
-veil = "0.1.0"
-storage = "0.1.0"
+veil-eth = { path = "../veil-eth", version = "0.1.0" }
+veil-sol = { path = "../veil-sol", version = "0.1.0" }
+veil-pvx = { path = "../veil-pvx", version = "0.1.0" }
+veil-storage = { path = "../veil-storage", version = "0.1.0" }
 thiserror = "2"
 zeroize = { version = "1", features = ["zeroize_derive", "std"] }
 sha2 = "0.10"

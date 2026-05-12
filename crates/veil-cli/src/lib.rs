@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 use rand::seq::SliceRandom;
 
 #[derive(Parser)]
-#[command(name = "wallet", about = "Multichain wallet CLI")]
+#[command(name = "veil", about = "Multichain wallet CLI")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -82,7 +82,7 @@ pub fn resolve_password(cli_pw: Option<String>) -> Result<String> {
 ///
 /// Returns an error if wallet creation or address derivation fails.
 pub fn cmd_create() -> Result<()> {
-    let wallet = sdk::Wallet::create().context("failed to create wallet")?;
+    let wallet = veil_wallet_sdk::Wallet::create().context("failed to create wallet")?;
 
     println!("Wallet Created\n");
 
@@ -107,7 +107,7 @@ pub fn cmd_create() -> Result<()> {
 ///
 /// Returns an error if the mnemonic is invalid or address derivation fails.
 pub fn cmd_import(mnemonic: &str, save: bool, password: &str) -> Result<()> {
-    let wallet = sdk::Wallet::import(mnemonic).context("invalid mnemonic phrase")?;
+    let wallet = veil_wallet_sdk::Wallet::import(mnemonic).context("invalid mnemonic phrase")?;
 
     if save {
         wallet.save(password).context("failed to save wallet")?;
@@ -129,7 +129,7 @@ pub fn cmd_import(mnemonic: &str, save: bool, password: &str) -> Result<()> {
 ///
 /// Returns an error if wallet creation, encryption, or I/O fails.
 pub fn cmd_save(password: &str) -> Result<()> {
-    let wallet = sdk::Wallet::create().context("failed to create wallet")?;
+    let wallet = veil_wallet_sdk::Wallet::create().context("failed to create wallet")?;
     wallet.save(password).context("failed to save wallet")?;
 
     println!("Wallet Created & Saved\n");
@@ -154,7 +154,7 @@ pub fn cmd_save(password: &str) -> Result<()> {
 /// Returns an error if the password is wrong, the file is corrupted,
 /// or I/O fails.
 pub fn cmd_load(password: &str) -> Result<()> {
-    let wallet = sdk::Wallet::load(password).context("failed to load wallet")?;
+    let wallet = veil_wallet_sdk::Wallet::load(password).context("failed to load wallet")?;
 
     println!("Wallet Loaded\n");
     println!("ETH: {}", wallet.eth_address());
@@ -178,7 +178,7 @@ pub fn cmd_address(eth: bool, sol: bool, pvx: bool) -> Result<()> {
         .with_prompt("Password")
         .interact()
         .context("failed to read password")?;
-    let wallet = sdk::Wallet::load(&password).context("failed to load wallet")?;
+    let wallet = veil_wallet_sdk::Wallet::load(&password).context("failed to load wallet")?;
 
     let any_flag = eth || sol || pvx;
     if !any_flag || eth {
@@ -203,7 +203,7 @@ pub fn cmd_address(eth: bool, sol: bool, pvx: bool) -> Result<()> {
 /// Returns an error if the password is wrong, the vault is corrupted,
 /// or user input fails.
 pub fn cmd_export_seed(password: &str) -> Result<()> {
-    let wallet = sdk::Wallet::load(password).context("failed to load wallet")?;
+    let wallet = veil_wallet_sdk::Wallet::load(password).context("failed to load wallet")?;
 
     let Some(mnemonic) = wallet.mnemonic() else {
         println!("No mnemonic available (wallet was saved without mnemonic).");
@@ -249,7 +249,7 @@ pub fn cmd_export_private_key(chain: &str, password: &str) -> Result<()> {
         return Ok(());
     }
 
-    let wallet = sdk::Wallet::load(password).context("failed to load wallet")?;
+    let wallet = veil_wallet_sdk::Wallet::load(password).context("failed to load wallet")?;
 
     match chain {
         "eth" => {
@@ -289,7 +289,7 @@ pub fn cmd_export_private_key(chain: &str, password: &str) -> Result<()> {
 /// Returns an error if the password is wrong, the vault is corrupted,
 /// or user input fails.
 pub fn cmd_verify(password: &str) -> Result<()> {
-    let wallet = sdk::Wallet::load(password).context("failed to load wallet")?;
+    let wallet = veil_wallet_sdk::Wallet::load(password).context("failed to load wallet")?;
 
     let Some(mnemonic_str) = wallet.mnemonic() else {
         anyhow::bail!("No mnemonic available for verification (wallet was saved without mnemonic)");
@@ -324,7 +324,7 @@ pub fn cmd_verify(password: &str) -> Result<()> {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use sdk::WalletError;
+    use veil_wallet_sdk::WalletError;
     use std::sync::Mutex;
 
     static SERIAL: Mutex<()> = Mutex::new(());
@@ -345,7 +345,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_create_wallet() {
-        let wallet = sdk::Wallet::create().unwrap();
+        let wallet = veil_wallet_sdk::Wallet::create().unwrap();
         assert!(wallet.mnemonic().is_some());
         assert!(wallet.eth_address().starts_with("0x"));
         assert_eq!(wallet.eth_address().len(), 42);
@@ -356,28 +356,28 @@ pub(crate) mod tests {
     #[test]
     fn test_import_valid_mnemonic() {
         let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-        let wallet = sdk::Wallet::import(phrase).unwrap();
+        let wallet = veil_wallet_sdk::Wallet::import(phrase).unwrap();
         assert_eq!(wallet.eth_address().len(), 42);
         assert_ne!(wallet.sol_address().len(), 0);
     }
 
     #[test]
     fn test_import_invalid_mnemonic() {
-        let result = sdk::Wallet::import("foo bar baz");
+        let result = veil_wallet_sdk::Wallet::import("foo bar baz");
         assert!(matches!(result, Err(WalletError::InvalidMnemonic)));
     }
 
     #[test]
     fn test_save_load_roundtrip() {
         with_isolated_dir("cli_save_load", || {
-            let wallet = sdk::Wallet::create().unwrap();
+            let wallet = veil_wallet_sdk::Wallet::create().unwrap();
             let eth = wallet.eth_address().to_string();
             let sol = wallet.sol_address().to_string();
             let pvx = wallet.pvx_address().to_string();
 
             wallet.save("correct-horse-battery-staple").unwrap();
 
-            let loaded = sdk::Wallet::load("correct-horse-battery-staple").unwrap();
+            let loaded = veil_wallet_sdk::Wallet::load("correct-horse-battery-staple").unwrap();
             assert_eq!(eth, loaded.eth_address());
             assert_eq!(sol, loaded.sol_address());
             assert_eq!(pvx, loaded.pvx_address());
@@ -387,12 +387,12 @@ pub(crate) mod tests {
     #[test]
     fn test_save_load_preserves_mnemonic() {
         with_isolated_dir("cli_save_load_mnemonic", || {
-            let wallet = sdk::Wallet::create().unwrap();
+            let wallet = veil_wallet_sdk::Wallet::create().unwrap();
             let orig_mnemonic = wallet.mnemonic().unwrap().to_string();
 
             wallet.save("pw").unwrap();
 
-            let loaded = sdk::Wallet::load("pw").unwrap();
+            let loaded = veil_wallet_sdk::Wallet::load("pw").unwrap();
             assert_eq!(
                 loaded.mnemonic(),
                 Some(orig_mnemonic.as_str()),
@@ -404,10 +404,10 @@ pub(crate) mod tests {
     #[test]
     fn test_address_filtering() {
         with_isolated_dir("cli_address_filter", || {
-            let wallet = sdk::Wallet::create().unwrap();
+            let wallet = veil_wallet_sdk::Wallet::create().unwrap();
             wallet.save("pw").unwrap();
 
-            let loaded = sdk::Wallet::load("pw").unwrap();
+            let loaded = veil_wallet_sdk::Wallet::load("pw").unwrap();
             assert_eq!(wallet.eth_address(), loaded.eth_address());
             assert_eq!(wallet.sol_address(), loaded.sol_address());
             assert_eq!(wallet.pvx_address(), loaded.pvx_address());
@@ -428,7 +428,7 @@ pub(crate) mod tests {
     #[test]
     fn test_private_key_derivation() {
         let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-        let wallet = sdk::Wallet::import(phrase).unwrap();
+        let wallet = veil_wallet_sdk::Wallet::import(phrase).unwrap();
 
         let eth_key = wallet.eth_private_key().unwrap();
         assert_eq!(eth_key.len(), 32);

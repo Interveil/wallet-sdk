@@ -521,18 +521,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eth"
-version = "0.1.0"
-dependencies = [
- "bip32",
- "bip39",
- "hex",
- "k256",
- "thiserror 2.0.18",
- "tiny-keccak",
-]
-
-[[package]]
 name = "fastrand"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -916,25 +904,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sdk"
-version = "0.1.0"
-dependencies = [
- "bech32",
- "bip39",
- "bs58",
- "ed25519-dalek",
- "eth",
- "hex",
- "k256",
- "sha2",
- "sol",
- "storage",
- "thiserror 2.0.18",
- "veil",
- "zeroize",
-]
-
-[[package]]
 name = "sec1"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1048,18 +1017,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sol"
-version = "0.1.0"
-dependencies = [
- "bip39",
- "bs58",
- "ed25519-dalek",
- "hmac",
- "sha2",
- "thiserror 2.0.18",
-]
-
-[[package]]
 name = "spki"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1067,18 +1024,6 @@ checksum = "d91ed6c858b01f942cd56b37a94b3e0a1798290327d1236e4d9cf4eaca44d29d"
 dependencies = [
  "base64ct",
  "der",
-]
-
-[[package]]
-name = "storage"
-version = "0.1.0"
-dependencies = [
- "aes-gcm",
- "argon2",
- "bip39",
- "rand",
- "thiserror 2.0.18",
- "zeroize",
 ]
 
 [[package]]
@@ -1231,7 +1176,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
-name = "veil"
+name = "veil-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bech32",
+ "bs58",
+ "clap",
+ "dialoguer",
+ "hex",
+ "rand",
+ "veil-wallet-sdk",
+]
+
+[[package]]
+name = "veil-eth"
+version = "0.1.0"
+dependencies = [
+ "bip32",
+ "bip39",
+ "hex",
+ "k256",
+ "thiserror 2.0.18",
+ "tiny-keccak",
+]
+
+[[package]]
+name = "veil-pvx"
 version = "0.1.0"
 dependencies = [
  "bech32",
@@ -1242,24 +1213,53 @@ dependencies = [
 ]
 
 [[package]]
+name = "veil-sol"
+version = "0.1.0"
+dependencies = [
+ "bip39",
+ "bs58",
+ "ed25519-dalek",
+ "hmac",
+ "sha2",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "veil-storage"
+version = "0.1.0"
+dependencies = [
+ "aes-gcm",
+ "argon2",
+ "bip39",
+ "rand",
+ "thiserror 2.0.18",
+ "zeroize",
+]
+
+[[package]]
+name = "veil-wallet-sdk"
+version = "0.1.0"
+dependencies = [
+ "bech32",
+ "bip39",
+ "bs58",
+ "ed25519-dalek",
+ "hex",
+ "k256",
+ "sha2",
+ "thiserror 2.0.18",
+ "veil-eth",
+ "veil-pvx",
+ "veil-sol",
+ "veil-storage",
+ "zeroize",
+]
+
+[[package]]
 name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
-
-[[package]]
-name = "wallet-cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bech32",
- "bs58",
- "clap",
- "dialoguer",
- "hex",
- "rand",
- "sdk",
-]
 
 [[package]]
 name = "wasi"

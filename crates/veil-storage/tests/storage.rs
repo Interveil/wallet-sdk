@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
-use storage::{StorageError, load_wallet, save_wallet};
+use veil_storage::{StorageError, load_wallet, save_wallet};
 
 // Must match storage::HEADER_LEN (1 + 16 + 12)
 const HEADER_LEN: usize = 29;
