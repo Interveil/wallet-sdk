@@ -30,7 +30,7 @@ pub enum WalletError {
 }
 
 pub struct Wallet {
-    mnemonic: String,
+    mnemonic: Zeroizing<String>,
     seed: Zeroizing<Vec<u8>>,
     eth_address: String,
     sol_address: String,
@@ -59,7 +59,7 @@ impl Wallet {
         let seed = Zeroizing::new(mnemonic.to_seed("").to_vec());
         let (eth_address, sol_address, pvx_address) = Self::derive_addresses(&seed)?;
         Ok(Wallet {
-            mnemonic: phrase,
+            mnemonic: Zeroizing::new(phrase),
             seed,
             eth_address,
             sol_address,
@@ -83,7 +83,7 @@ impl Wallet {
         let seed = Zeroizing::new(mnemonic.to_seed("").to_vec());
         let (eth_address, sol_address, pvx_address) = Self::derive_addresses(&seed)?;
         Ok(Wallet {
-            mnemonic: phrase,
+            mnemonic: Zeroizing::new(phrase),
             seed,
             eth_address,
             sol_address,
@@ -94,15 +94,29 @@ impl Wallet {
     /// Reconstructs a `Wallet` from a raw seed, optionally with a mnemonic.
     ///
     /// This is used when loading a wallet from encrypted storage.
+    /// If a mnemonic is provided, it is verified against the seed to
+    /// detect corruption.
     ///
     /// # Errors
     ///
     /// Returns `WalletError::DerivationFailed` if address derivation fails.
+    /// Returns `WalletError::WalletCorrupted` if the mnemonic does not
+    /// derive the given seed.
     pub fn from_seed(seed: Vec<u8>, mnemonic: Option<String>) -> Result<Self, WalletError> {
+        if let Some(ref phrase) = mnemonic {
+            if !phrase.is_empty() {
+                let parsed = Mnemonic::parse_in(Language::English, phrase)
+                    .map_err(|_| WalletError::WalletCorrupted)?;
+                let expected_seed = Zeroizing::new(parsed.to_seed("").to_vec());
+                if *expected_seed != seed {
+                    return Err(WalletError::WalletCorrupted);
+                }
+            }
+        }
         let mnemonic_str = mnemonic.unwrap_or_default();
         let (eth_address, sol_address, pvx_address) = Self::derive_addresses(&seed)?;
         Ok(Wallet {
-            mnemonic: mnemonic_str,
+            mnemonic: Zeroizing::new(mnemonic_str),
             seed: Zeroizing::new(seed),
             eth_address,
             sol_address,
@@ -117,11 +131,6 @@ impl Wallet {
         } else {
             Some(self.mnemonic.as_str())
         }
-    }
-
-    #[must_use]
-    pub fn seed(&self) -> &[u8] {
-        &self.seed
     }
 
     #[must_use]

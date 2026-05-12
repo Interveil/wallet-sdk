@@ -1,6 +1,6 @@
 use bip32::{DerivationPath, XPrv};
 use k256::ecdsa::signature::hazmat::PrehashSigner;
-use k256::ecdsa::{Signature, SigningKey};
+use k256::ecdsa::{RecoveryId, Signature, SigningKey, VerifyingKey};
 use std::str::FromStr;
 use thiserror::Error;
 use tiny_keccak::{Hasher, Keccak};
@@ -64,16 +64,34 @@ pub fn derive_eth_address(seed: &[u8]) -> Result<String, EthError> {
 /// Signs a 32-byte SHA-256 hash with a secp256k1 private key (ECDSA, RFC 6979).
 ///
 /// Uses deterministic `sign_prehash` — no randomness, no extra hashing.
-/// Returns the 64-byte raw `(r || s)` signature.
+/// Returns the 65-byte `(r || s || v)` signature with Ethereum recovery ID
+/// (`v = 27 + recid`, where `recid` is 0 or 1).
 ///
 /// # Errors
 ///
 /// Returns `EthError::SigningFailed` if key construction or signing fails.
-pub fn sign_eth(key: &[u8; 32], hash: &[u8; 32]) -> Result<[u8; 64], EthError> {
+pub fn sign_eth(key: &[u8; 32], hash: &[u8; 32]) -> Result<[u8; 65], EthError> {
     let signing_key =
         SigningKey::from_slice(key.as_ref()).map_err(|_| EthError::SigningFailed)?;
     let signature: Signature = signing_key
         .sign_prehash(hash.as_ref())
         .map_err(|_| EthError::SigningFailed)?;
-    Ok(signature.to_bytes().into())
+
+    let verifying_key = signing_key.verifying_key();
+
+    let recid_0 = RecoveryId::new(false, false);
+    let recid_1 = RecoveryId::new(true, false);
+
+    let recid = if VerifyingKey::recover_from_prehash(hash.as_ref(), &signature, recid_0)
+        .map_or(false, |vk| vk == *verifying_key)
+    {
+        recid_0
+    } else {
+        recid_1
+    };
+
+    let mut sig_bytes = [0u8; 65];
+    sig_bytes[..64].copy_from_slice(&signature.to_bytes());
+    sig_bytes[64] = 27 + recid.to_byte();
+    Ok(sig_bytes)
 }

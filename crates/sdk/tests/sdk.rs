@@ -254,7 +254,7 @@ fn test_sign_eth_deterministic() {
     let sig_a = session.sign(msg, Chain::Eth).unwrap();
     let sig_b = session.sign(msg, Chain::Eth).unwrap();
 
-    assert_eq!(sig_a.len(), 64, "ECDSA signature must be 64 bytes");
+    assert_eq!(sig_a.len(), 65, "ECDSA signature must be 65 bytes (r || s || v)");
     assert_eq!(sig_a, sig_b, "signatures must be deterministic (RFC 6979)");
 }
 
@@ -278,7 +278,9 @@ fn test_sign_eth_verify() {
 
     let hash = Sha256::digest(msg);
     let sig_bytes = session.sign(msg, Chain::Eth).unwrap();
-    let signature = Signature::from_slice(&sig_bytes).unwrap();
+    // Strip the recovery byte (v) for ECDSA verification
+    let (r_s, _v) = sig_bytes.split_at(64);
+    let signature = Signature::from_slice(r_s).unwrap();
 
     let eth_key = Wallet::import(TEST_MNEMONIC).unwrap().eth_private_key().unwrap();
     let signing_key = SigningKey::from_slice(&eth_key).unwrap();
@@ -315,7 +317,7 @@ fn test_sign_with_nonce_differs() {
         sig_nonce_a, sig_nonce_b,
         "different nonces must produce different Solana signatures"
     );
-    assert_eq!(sig_nonce_eth.len(), 64, "ECDSA nonced signature must be 64 bytes");
+    assert_eq!(sig_nonce_eth.len(), 65, "ECDSA nonced signature must be 65 bytes");
 }
 
 // --- General ---

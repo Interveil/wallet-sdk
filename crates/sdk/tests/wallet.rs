@@ -5,7 +5,7 @@ fn test_create_wallet() {
     let wallet = Wallet::create().unwrap();
     let words: Vec<&str> = wallet.mnemonic().unwrap().split_whitespace().collect();
     assert_eq!(words.len(), 12);
-    assert_eq!(wallet.seed().len(), 64);
+    assert_eq!(wallet.eth_address().len(), 42);
 }
 
 #[test]
@@ -13,7 +13,7 @@ fn test_same_mnemonic_same_seed() {
     let wallet1 = Wallet::create().unwrap();
     let phrase = wallet1.mnemonic().unwrap().to_string();
     let wallet2 = Wallet::import(&phrase).unwrap();
-    assert_eq!(wallet1.seed(), wallet2.seed());
+    assert_eq!(wallet1.eth_address(), wallet2.eth_address());
 }
 
 #[test]
@@ -24,7 +24,7 @@ fn test_different_mnemonic_different_seed() {
     let wallet_a = Wallet::import(phrase_a).unwrap();
     let wallet_b = Wallet::import(phrase_b).unwrap();
 
-    assert_ne!(wallet_a.seed(), wallet_b.seed());
+    assert_ne!(wallet_a.eth_address(), wallet_b.eth_address());
 }
 
 #[test]
