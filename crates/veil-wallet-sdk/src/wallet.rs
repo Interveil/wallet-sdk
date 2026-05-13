@@ -103,14 +103,14 @@ impl Wallet {
     /// Returns `WalletError::WalletCorrupted` if the mnemonic does not
     /// derive the given seed.
     pub fn from_seed(seed: Vec<u8>, mnemonic: Option<String>) -> Result<Self, WalletError> {
-        if let Some(ref phrase) = mnemonic {
-            if !phrase.is_empty() {
-                let parsed = Mnemonic::parse_in(Language::English, phrase)
-                    .map_err(|_| WalletError::WalletCorrupted)?;
-                let expected_seed = Zeroizing::new(parsed.to_seed("").to_vec());
-                if *expected_seed != seed {
-                    return Err(WalletError::WalletCorrupted);
-                }
+        if let Some(ref phrase) = mnemonic
+            && !phrase.is_empty()
+        {
+            let parsed = Mnemonic::parse_in(Language::English, phrase)
+                .map_err(|_| WalletError::WalletCorrupted)?;
+            let expected_seed = Zeroizing::new(parsed.to_seed("").to_vec());
+            if *expected_seed != seed {
+                return Err(WalletError::WalletCorrupted);
             }
         }
         let mnemonic_str = mnemonic.unwrap_or_default();
