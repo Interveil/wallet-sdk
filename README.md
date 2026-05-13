@@ -6,4 +6,4 @@ Built as a Rust workspace with layered architecture: core mnemonic/seed generati
 
 ## License
 
-BSD-3-Clause
+MIT OR Apache-2.0
