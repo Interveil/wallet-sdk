@@ -83,7 +83,7 @@ pub fn sign_eth(key: &[u8; 32], hash: &[u8; 32]) -> Result<[u8; 65], EthError> {
     let recid_1 = RecoveryId::new(true, false);
 
     let recid = if VerifyingKey::recover_from_prehash(hash.as_ref(), &signature, recid_0)
-        .map_or(false, |vk| vk == *verifying_key)
+        .is_ok_and(|vk| vk == *verifying_key)
     {
         recid_0
     } else {
